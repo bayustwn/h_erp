@@ -1,5 +1,6 @@
 import { MiddlewareConsumer, Module, NestModule, RequestMethod } from '@nestjs/common'
 import { ConfigModule } from '@nestjs/config'
+import { AccessControlModule } from './access-control/access-control.module.js'
 import { AuthModule } from './auth/auth.module.js'
 import { RequestLoggerMiddleware } from './common/http/request-logger.middleware.js'
 import { loadAppConfig } from './config/env.config.js'
@@ -15,6 +16,7 @@ import { PrismaModule } from './prisma/prisma.module.js'
     }),
     PrismaModule,
     AuthModule,
+    AccessControlModule,
     HealthModule,
   ],
 })
