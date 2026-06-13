@@ -2,7 +2,9 @@ import { MiddlewareConsumer, Module, NestModule, RequestMethod } from '@nestjs/c
 import { ConfigModule } from '@nestjs/config'
 import { AccessControlModule } from './access-control/access-control.module.js'
 import { AuthModule } from './auth/auth.module.js'
+import { BranchesModule } from './branches/branches.module.js'
 import { RequestLoggerMiddleware } from './common/http/request-logger.middleware.js'
+import { CompaniesModule } from './companies/companies.module.js'
 import { loadAppConfig } from './config/env.config.js'
 import { HealthModule } from './health/health.module.js'
 import { PrismaModule } from './prisma/prisma.module.js'
@@ -18,6 +20,8 @@ import { UsersModule } from './users/users.module.js'
     PrismaModule,
     AuthModule,
     AccessControlModule,
+    CompaniesModule,
+    BranchesModule,
     UsersModule,
     HealthModule,
   ],

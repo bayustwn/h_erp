@@ -151,15 +151,14 @@ export class UsersService {
   ) {
     await this.assertUserBelongsToTenant(userId, tenant)
 
-    await this.prisma.user.update({
+    return this.prisma.user.update({
       where: { id: userId },
       data: {
         status: input.status,
         deletedAt: input.status === RecordStatus.ARCHIVED ? new Date() : null,
       },
+      select: this.userDetailSelect(tenant),
     })
-
-    return this.getById(userId, tenant)
   }
 
   async updateRoles(userId: string, input: UpdateUserRolesInput, tenant: TenantContext) {
