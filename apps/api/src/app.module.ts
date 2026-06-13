@@ -9,6 +9,7 @@ import { loadAppConfig } from './config/env.config.js'
 import { HealthModule } from './health/health.module.js'
 import { PrismaModule } from './prisma/prisma.module.js'
 import { UsersModule } from './users/users.module.js'
+import { WarehousesModule } from './warehouses/warehouses.module.js'
 
 @Module({
   imports: [
@@ -22,6 +23,7 @@ import { UsersModule } from './users/users.module.js'
     AccessControlModule,
     CompaniesModule,
     BranchesModule,
+    WarehousesModule,
     UsersModule,
     HealthModule,
   ],
