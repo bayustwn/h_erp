@@ -7,6 +7,7 @@ import { RequestLoggerMiddleware } from './common/http/request-logger.middleware
 import { CompaniesModule } from './companies/companies.module.js'
 import { loadAppConfig } from './config/env.config.js'
 import { HealthModule } from './health/health.module.js'
+import { InventoryModule } from './inventory/inventory.module.js'
 import { PrismaModule } from './prisma/prisma.module.js'
 import { UsersModule } from './users/users.module.js'
 import { WarehousesModule } from './warehouses/warehouses.module.js'
@@ -24,6 +25,7 @@ import { WarehousesModule } from './warehouses/warehouses.module.js'
     CompaniesModule,
     BranchesModule,
     WarehousesModule,
+    InventoryModule,
     UsersModule,
     HealthModule,
   ],
