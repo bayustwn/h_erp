@@ -1,5 +1,6 @@
-import { Module } from '@nestjs/common'
+import { MiddlewareConsumer, Module, NestModule, RequestMethod } from '@nestjs/common'
 import { ConfigModule } from '@nestjs/config'
+import { RequestLoggerMiddleware } from './common/http/request-logger.middleware.js'
 import { loadAppConfig } from './config/env.config.js'
 import { HealthModule } from './health/health.module.js'
 import { PrismaModule } from './prisma/prisma.module.js'
@@ -7,6 +8,7 @@ import { PrismaModule } from './prisma/prisma.module.js'
 @Module({
   imports: [
     ConfigModule.forRoot({
+      envFilePath: ['.env', '../../.env'],
       isGlobal: true,
       load: [loadAppConfig],
     }),
@@ -14,4 +16,11 @@ import { PrismaModule } from './prisma/prisma.module.js'
     HealthModule,
   ],
 })
-export class AppModule {}
+export class AppModule implements NestModule {
+  configure(consumer: MiddlewareConsumer) {
+    consumer.apply(RequestLoggerMiddleware).forRoutes({
+      path: '*path',
+      method: RequestMethod.ALL,
+    })
+  }
+}

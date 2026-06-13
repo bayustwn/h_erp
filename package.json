@@ -13,8 +13,8 @@
     "typecheck": "npm run typecheck --workspaces --if-present",
     "lint": "npm run lint --workspaces --if-present",
     "test": "npm run test --workspaces --if-present",
-    "format": "prettier --write .",
-    "format:check": "prettier --check ."
+    "format": "prettier --write \"*.{json,yml,yaml,md}\" \".prettierrc\" \"apps/**/*.{ts,tsx,js,mjs,json,css,html}\"",
+    "format:check": "prettier --check \"*.{json,yml,yaml,md}\" \".prettierrc\" \"apps/**/*.{ts,tsx,js,mjs,json,css,html}\""
   },
   "devDependencies": {
     "prettier": "3.8.4"
