@@ -12,9 +12,12 @@ export type AppConfig = {
   authRateLimitWindowSeconds: number
   authLoginRateLimitMax: number
   authRefreshRateLimitMax: number
-  supabaseUrl?: string
-  supabaseServiceRoleKey?: string
-  supabaseStorageBucket?: string
+  storageDriver: 'r2'
+  storageBucket: string
+  r2AccountId: string
+  r2AccessKeyId: string
+  r2SecretAccessKey: string
+  r2PublicBaseUrl?: string
 }
 
 const optionalString = z.preprocess(
@@ -33,9 +36,12 @@ const envSchema = z.object({
   AUTH_RATE_LIMIT_WINDOW_SECONDS: z.coerce.number().int().min(10).default(60),
   AUTH_LOGIN_RATE_LIMIT_MAX: z.coerce.number().int().min(1).default(5),
   AUTH_REFRESH_RATE_LIMIT_MAX: z.coerce.number().int().min(1).default(20),
-  SUPABASE_URL: optionalString,
-  SUPABASE_SERVICE_ROLE_KEY: optionalString,
-  SUPABASE_STORAGE_BUCKET: optionalString,
+  STORAGE_DRIVER: z.literal('r2').default('r2'),
+  STORAGE_BUCKET: z.string().min(1).default('erp-attachments'),
+  R2_ACCOUNT_ID: z.string().min(1),
+  R2_ACCESS_KEY_ID: z.string().min(1),
+  R2_SECRET_ACCESS_KEY: z.string().min(1),
+  R2_PUBLIC_BASE_URL: optionalString,
 })
 
 export const loadAppConfig = registerAs('app', (): AppConfig => {
@@ -52,8 +58,11 @@ export const loadAppConfig = registerAs('app', (): AppConfig => {
     authRateLimitWindowSeconds: env.AUTH_RATE_LIMIT_WINDOW_SECONDS,
     authLoginRateLimitMax: env.AUTH_LOGIN_RATE_LIMIT_MAX,
     authRefreshRateLimitMax: env.AUTH_REFRESH_RATE_LIMIT_MAX,
-    supabaseUrl: env.SUPABASE_URL,
-    supabaseServiceRoleKey: env.SUPABASE_SERVICE_ROLE_KEY,
-    supabaseStorageBucket: env.SUPABASE_STORAGE_BUCKET,
+    storageDriver: env.STORAGE_DRIVER,
+    storageBucket: env.STORAGE_BUCKET,
+    r2AccountId: env.R2_ACCOUNT_ID,
+    r2AccessKeyId: env.R2_ACCESS_KEY_ID,
+    r2SecretAccessKey: env.R2_SECRET_ACCESS_KEY,
+    r2PublicBaseUrl: env.R2_PUBLIC_BASE_URL,
   }
 })

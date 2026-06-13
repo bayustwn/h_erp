@@ -1,6 +1,7 @@
 import { MiddlewareConsumer, Module, NestModule, RequestMethod } from '@nestjs/common'
 import { ConfigModule } from '@nestjs/config'
 import { AccessControlModule } from './access-control/access-control.module.js'
+import { AttachmentsModule } from './attachments/attachments.module.js'
 import { AuditModule } from './audit/audit.module.js'
 import { AuthModule } from './auth/auth.module.js'
 import { BranchesModule } from './branches/branches.module.js'
@@ -30,6 +31,7 @@ import { WarehousesModule } from './warehouses/warehouses.module.js'
     WarehousesModule,
     InventoryModule,
     DocumentSequencesModule,
+    AttachmentsModule,
     UsersModule,
     HealthModule,
   ],
