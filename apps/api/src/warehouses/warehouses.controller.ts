@@ -16,6 +16,8 @@ import { CurrentTenant, RequireTenant } from '../access-control/tenant.decorator
 import { TenantGuard } from '../access-control/tenant.guard.js'
 import type { TenantContext } from '../access-control/access-control.types.js'
 import { AuthGuard } from '../auth/auth.guard.js'
+import type { AuthenticatedUser } from '../auth/auth.types.js'
+import { CurrentUser } from '../auth/current-user.decorator.js'
 import { ZodValidationPipe } from '../common/validation/zod-validation.pipe.js'
 import {
   createWarehouseSchema,
@@ -60,8 +62,9 @@ export class WarehousesController {
   create(
     @Body(new ZodValidationPipe(createWarehouseSchema)) body: CreateWarehouseInput,
     @CurrentTenant() tenant: TenantContext,
+    @CurrentUser() user: AuthenticatedUser,
   ) {
-    return this.warehousesService.create(body, tenant)
+    return this.warehousesService.create(body, tenant, user.id)
   }
 
   @Patch(':id')
@@ -70,8 +73,9 @@ export class WarehousesController {
     @Param('id', ParseUUIDPipe) id: string,
     @Body(new ZodValidationPipe(updateWarehouseSchema)) body: UpdateWarehouseInput,
     @CurrentTenant() tenant: TenantContext,
+    @CurrentUser() user: AuthenticatedUser,
   ) {
-    return this.warehousesService.update(id, body, tenant)
+    return this.warehousesService.update(id, body, tenant, user.id)
   }
 
   @Patch(':id/status')
@@ -81,7 +85,8 @@ export class WarehousesController {
     @Body(new ZodValidationPipe(updateWarehouseStatusSchema))
     body: UpdateWarehouseStatusInput,
     @CurrentTenant() tenant: TenantContext,
+    @CurrentUser() user: AuthenticatedUser,
   ) {
-    return this.warehousesService.updateStatus(id, body, tenant)
+    return this.warehousesService.updateStatus(id, body, tenant, user.id)
   }
 }

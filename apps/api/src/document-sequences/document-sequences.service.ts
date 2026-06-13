@@ -6,6 +6,7 @@ import {
   UnprocessableEntityException,
 } from '@nestjs/common'
 import type { TenantContext } from '../access-control/access-control.types.js'
+import { AuditService } from '../audit/audit.service.js'
 import {
   createPaginationMeta,
   getPaginationSkipTake,
@@ -32,7 +33,10 @@ type LockedDocumentSequence = {
 
 @Injectable()
 export class DocumentSequencesService {
-  constructor(@Inject(PrismaService) private readonly prisma: PrismaService) {}
+  constructor(
+    @Inject(PrismaService) private readonly prisma: PrismaService,
+    @Inject(AuditService) private readonly auditService: AuditService,
+  ) {}
 
   async list(query: DocumentSequencesQuery, tenant: TenantContext) {
     const pagination = { page: query.page, pageSize: query.pageSize }
@@ -72,18 +76,40 @@ export class DocumentSequencesService {
     return sequence
   }
 
-  async create(input: CreateDocumentSequenceInput, tenant: TenantContext) {
+  async create(
+    input: CreateDocumentSequenceInput,
+    tenant: TenantContext,
+    actorUserId: string,
+  ) {
     await this.assertBranchBelongsToCompany(input.branchId, tenant)
     if (input.isActive) await this.assertNoActiveSequence(input, tenant)
 
-    const sequence = await this.prisma.documentSequence.create({
-      data: { ...input, companyId: tenant.companyId },
-      select: { id: true },
+    return this.prisma.$transaction(async (tx) => {
+      const sequence = await tx.documentSequence.create({
+        data: { ...input, companyId: tenant.companyId },
+        select: this.sequenceSelect(),
+      })
+      await this.auditService.recordCreate(
+        {
+          tenant,
+          actorUserId,
+          entityType: 'DocumentSequence',
+          entityId: sequence.id,
+          newValues: sequence,
+        },
+        tx,
+      )
+
+      return sequence
     })
-    return this.getById(sequence.id, tenant)
   }
 
-  async update(id: string, input: UpdateDocumentSequenceInput, tenant: TenantContext) {
+  async update(
+    id: string,
+    input: UpdateDocumentSequenceInput,
+    tenant: TenantContext,
+    actorUserId: string,
+  ) {
     const current = await this.getById(id, tenant)
     await this.assertBranchBelongsToCompany(input.branchId ?? undefined, tenant)
 
@@ -100,11 +126,28 @@ export class DocumentSequencesService {
       await this.assertNoActiveSequence(nextState, tenant, id)
     }
 
-    await this.prisma.documentSequence.update({
-      where: { id },
-      data: input,
+    return this.prisma.$transaction(async (tx) => {
+      const updated = await tx.documentSequence.update({
+        where: { id },
+        data: input,
+        select: this.sequenceSelect(),
+      })
+      const auditInput = {
+        tenant,
+        actorUserId,
+        entityType: 'DocumentSequence',
+        entityId: id,
+        oldValues: current,
+        newValues: updated,
+      }
+      if (input.isActive === false) {
+        await this.auditService.recordDelete(auditInput, tx)
+      } else {
+        await this.auditService.recordUpdate(auditInput, tx)
+      }
+
+      return updated
     })
-    return this.getById(id, tenant)
   }
 
   async generate(input: GenerateDocumentNumberInput, tenant: TenantContext) {

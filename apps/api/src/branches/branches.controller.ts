@@ -16,6 +16,8 @@ import { CurrentTenant, RequireTenant } from '../access-control/tenant.decorator
 import { TenantGuard } from '../access-control/tenant.guard.js'
 import type { TenantContext } from '../access-control/access-control.types.js'
 import { AuthGuard } from '../auth/auth.guard.js'
+import type { AuthenticatedUser } from '../auth/auth.types.js'
+import { CurrentUser } from '../auth/current-user.decorator.js'
 import { ZodValidationPipe } from '../common/validation/zod-validation.pipe.js'
 import {
   branchesQuerySchema,
@@ -60,8 +62,9 @@ export class BranchesController {
   create(
     @Body(new ZodValidationPipe(createBranchSchema)) body: CreateBranchInput,
     @CurrentTenant() tenant: TenantContext,
+    @CurrentUser() user: AuthenticatedUser,
   ) {
-    return this.branchesService.create(body, tenant)
+    return this.branchesService.create(body, tenant, user.id)
   }
 
   @Patch(':id')
@@ -70,8 +73,9 @@ export class BranchesController {
     @Param('id', ParseUUIDPipe) id: string,
     @Body(new ZodValidationPipe(updateBranchSchema)) body: UpdateBranchInput,
     @CurrentTenant() tenant: TenantContext,
+    @CurrentUser() user: AuthenticatedUser,
   ) {
-    return this.branchesService.update(id, body, tenant)
+    return this.branchesService.update(id, body, tenant, user.id)
   }
 
   @Patch(':id/status')
@@ -81,7 +85,8 @@ export class BranchesController {
     @Body(new ZodValidationPipe(updateBranchStatusSchema))
     body: UpdateBranchStatusInput,
     @CurrentTenant() tenant: TenantContext,
+    @CurrentUser() user: AuthenticatedUser,
   ) {
-    return this.branchesService.updateStatus(id, body, tenant)
+    return this.branchesService.updateStatus(id, body, tenant, user.id)
   }
 }

@@ -16,6 +16,8 @@ import { RequirePermissions } from '../access-control/permissions.decorator.js'
 import { CurrentTenant, RequireTenant } from '../access-control/tenant.decorator.js'
 import { TenantGuard } from '../access-control/tenant.guard.js'
 import { AuthGuard } from '../auth/auth.guard.js'
+import type { AuthenticatedUser } from '../auth/auth.types.js'
+import { CurrentUser } from '../auth/current-user.decorator.js'
 import { ZodValidationPipe } from '../common/validation/zod-validation.pipe.js'
 import {
   createDocumentSequenceSchema,
@@ -63,8 +65,9 @@ export class DocumentSequencesController {
     @Body(new ZodValidationPipe(createDocumentSequenceSchema))
     body: CreateDocumentSequenceInput,
     @CurrentTenant() tenant: TenantContext,
+    @CurrentUser() user: AuthenticatedUser,
   ) {
-    return this.documentSequencesService.create(body, tenant)
+    return this.documentSequencesService.create(body, tenant, user.id)
   }
 
   @Patch(':id')
@@ -74,8 +77,9 @@ export class DocumentSequencesController {
     @Body(new ZodValidationPipe(updateDocumentSequenceSchema))
     body: UpdateDocumentSequenceInput,
     @CurrentTenant() tenant: TenantContext,
+    @CurrentUser() user: AuthenticatedUser,
   ) {
-    return this.documentSequencesService.update(id, body, tenant)
+    return this.documentSequencesService.update(id, body, tenant, user.id)
   }
 
   @Post('next')

@@ -5,6 +5,8 @@ import { CurrentTenant, RequireTenant } from '../access-control/tenant.decorator
 import { TenantGuard } from '../access-control/tenant.guard.js'
 import type { TenantContext } from '../access-control/access-control.types.js'
 import { AuthGuard } from '../auth/auth.guard.js'
+import type { AuthenticatedUser } from '../auth/auth.types.js'
+import { CurrentUser } from '../auth/current-user.decorator.js'
 import { ZodValidationPipe } from '../common/validation/zod-validation.pipe.js'
 import {
   companiesQuerySchema,
@@ -42,7 +44,8 @@ export class CompaniesController {
   updateCurrent(
     @Body(new ZodValidationPipe(updateCompanySchema)) body: UpdateCompanyInput,
     @CurrentTenant() tenant: TenantContext,
+    @CurrentUser() user: AuthenticatedUser,
   ) {
-    return this.companiesService.updateCurrent(body, tenant)
+    return this.companiesService.updateCurrent(body, tenant, user.id)
   }
 }

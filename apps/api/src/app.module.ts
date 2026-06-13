@@ -1,6 +1,7 @@
 import { MiddlewareConsumer, Module, NestModule, RequestMethod } from '@nestjs/common'
 import { ConfigModule } from '@nestjs/config'
 import { AccessControlModule } from './access-control/access-control.module.js'
+import { AuditModule } from './audit/audit.module.js'
 import { AuthModule } from './auth/auth.module.js'
 import { BranchesModule } from './branches/branches.module.js'
 import { RequestLoggerMiddleware } from './common/http/request-logger.middleware.js'
@@ -21,6 +22,7 @@ import { WarehousesModule } from './warehouses/warehouses.module.js'
       load: [loadAppConfig],
     }),
     PrismaModule,
+    AuditModule,
     AuthModule,
     AccessControlModule,
     CompaniesModule,

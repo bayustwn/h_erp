@@ -3,6 +3,7 @@ import {
   createPaginationMeta,
   getPaginationSkipTake,
 } from '../common/pagination/pagination.js'
+import { AuditService } from '../audit/audit.service.js'
 import { RecordStatus } from '../generated/prisma/enums.js'
 import { PrismaService } from '../prisma/prisma.service.js'
 import type { TenantContext } from '../access-control/access-control.types.js'
@@ -10,7 +11,10 @@ import type { CompaniesQuery, UpdateCompanyInput } from './companies.schemas.js'
 
 @Injectable()
 export class CompaniesService {
-  constructor(@Inject(PrismaService) private readonly prisma: PrismaService) {}
+  constructor(
+    @Inject(PrismaService) private readonly prisma: PrismaService,
+    @Inject(AuditService) private readonly auditService: AuditService,
+  ) {}
 
   async list(query: CompaniesQuery) {
     const pagination = {
@@ -62,17 +66,35 @@ export class CompaniesService {
     return company
   }
 
-  async updateCurrent(input: UpdateCompanyInput, tenant: TenantContext) {
-    await this.getCurrent(tenant)
+  async updateCurrent(
+    input: UpdateCompanyInput,
+    tenant: TenantContext,
+    actorUserId: string,
+  ) {
+    const current = await this.getCurrent(tenant)
 
-    await this.prisma.company.update({
-      where: {
-        id: tenant.companyId,
-      },
-      data: input,
+    return this.prisma.$transaction(async (tx) => {
+      const updated = await tx.company.update({
+        where: {
+          id: tenant.companyId,
+        },
+        data: input,
+        select: this.companySelect(),
+      })
+      await this.auditService.recordUpdate(
+        {
+          tenant,
+          actorUserId,
+          entityType: 'Company',
+          entityId: tenant.companyId,
+          oldValues: current,
+          newValues: updated,
+        },
+        tx,
+      )
+
+      return updated
     })
-
-    return this.getCurrent(tenant)
   }
 
   private companySelect() {

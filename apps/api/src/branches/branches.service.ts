@@ -3,6 +3,7 @@ import {
   createPaginationMeta,
   getPaginationSkipTake,
 } from '../common/pagination/pagination.js'
+import { AuditService } from '../audit/audit.service.js'
 import { RecordStatus } from '../generated/prisma/enums.js'
 import { PrismaService } from '../prisma/prisma.service.js'
 import type { TenantContext } from '../access-control/access-control.types.js'
@@ -15,7 +16,10 @@ import type {
 
 @Injectable()
 export class BranchesService {
-  constructor(@Inject(PrismaService) private readonly prisma: PrismaService) {}
+  constructor(
+    @Inject(PrismaService) private readonly prisma: PrismaService,
+    @Inject(AuditService) private readonly auditService: AuditService,
+  ) {}
 
   async list(query: BranchesQuery, tenant: TenantContext) {
     const pagination = {
@@ -68,55 +72,102 @@ export class BranchesService {
     return branch
   }
 
-  async create(input: CreateBranchInput, tenant: TenantContext) {
+  async create(input: CreateBranchInput, tenant: TenantContext, actorUserId: string) {
     await this.assertCodeIsAvailable(input.code, tenant)
 
-    const branch = await this.prisma.branch.create({
-      data: {
-        companyId: tenant.companyId,
-        code: input.code,
-        name: input.name,
-        email: input.email,
-        phone: input.phone,
-        address: input.address,
-      },
-      select: {
-        id: true,
-      },
-    })
+    return this.prisma.$transaction(async (tx) => {
+      const branch = await tx.branch.create({
+        data: {
+          companyId: tenant.companyId,
+          code: input.code,
+          name: input.name,
+          email: input.email,
+          phone: input.phone,
+          address: input.address,
+        },
+        select: this.branchSelect(),
+      })
+      await this.auditService.recordCreate(
+        {
+          tenant,
+          actorUserId,
+          entityType: 'Branch',
+          entityId: branch.id,
+          newValues: branch,
+        },
+        tx,
+      )
 
-    return this.getById(branch.id, tenant)
+      return branch
+    })
   }
 
-  async update(branchId: string, input: UpdateBranchInput, tenant: TenantContext) {
-    await this.getById(branchId, tenant)
+  async update(
+    branchId: string,
+    input: UpdateBranchInput,
+    tenant: TenantContext,
+    actorUserId: string,
+  ) {
+    const current = await this.getById(branchId, tenant)
 
-    await this.prisma.branch.update({
-      where: {
-        id: branchId,
-      },
-      data: input,
+    return this.prisma.$transaction(async (tx) => {
+      const updated = await tx.branch.update({
+        where: {
+          id: branchId,
+        },
+        data: input,
+        select: this.branchSelect(),
+      })
+      await this.auditService.recordUpdate(
+        {
+          tenant,
+          actorUserId,
+          entityType: 'Branch',
+          entityId: branchId,
+          oldValues: current,
+          newValues: updated,
+        },
+        tx,
+      )
+
+      return updated
     })
-
-    return this.getById(branchId, tenant)
   }
 
   async updateStatus(
     branchId: string,
     input: UpdateBranchStatusInput,
     tenant: TenantContext,
+    actorUserId: string,
   ) {
-    await this.getById(branchId, tenant)
+    const current = await this.getById(branchId, tenant)
 
-    return this.prisma.branch.update({
-      where: {
-        id: branchId,
-      },
-      data: {
-        status: input.status,
-        deletedAt: input.status === RecordStatus.ARCHIVED ? new Date() : null,
-      },
-      select: this.branchSelect(),
+    return this.prisma.$transaction(async (tx) => {
+      const updated = await tx.branch.update({
+        where: {
+          id: branchId,
+        },
+        data: {
+          status: input.status,
+          deletedAt: input.status === RecordStatus.ARCHIVED ? new Date() : null,
+        },
+        select: this.branchSelect(),
+      })
+      const auditInput = {
+        tenant,
+        actorUserId,
+        entityType: 'Branch',
+        entityId: branchId,
+        oldValues: current,
+        newValues: updated,
+      }
+      if (input.status === RecordStatus.ARCHIVED) {
+        await this.auditService.recordDelete(auditInput, tx)
+      } else {
+        await this.auditService.recordUpdate(auditInput, tx)
+      }
+
+      return updated
     })
   }
 

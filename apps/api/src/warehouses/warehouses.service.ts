@@ -9,6 +9,7 @@ import {
   createPaginationMeta,
   getPaginationSkipTake,
 } from '../common/pagination/pagination.js'
+import { AuditService } from '../audit/audit.service.js'
 import { RecordStatus } from '../generated/prisma/enums.js'
 import { PrismaService } from '../prisma/prisma.service.js'
 import type { TenantContext } from '../access-control/access-control.types.js'
@@ -21,7 +22,10 @@ import type {
 
 @Injectable()
 export class WarehousesService {
-  constructor(@Inject(PrismaService) private readonly prisma: PrismaService) {}
+  constructor(
+    @Inject(PrismaService) private readonly prisma: PrismaService,
+    @Inject(AuditService) private readonly auditService: AuditService,
+  ) {}
 
   async list(query: WarehousesQuery, tenant: TenantContext) {
     const pagination = {
@@ -75,56 +79,103 @@ export class WarehousesService {
     return warehouse
   }
 
-  async create(input: CreateWarehouseInput, tenant: TenantContext) {
+  async create(input: CreateWarehouseInput, tenant: TenantContext, actorUserId: string) {
     await this.assertCodeIsAvailable(input.code, tenant)
     await this.assertBranchBelongsToCompany(input.branchId, tenant)
 
-    const warehouse = await this.prisma.warehouse.create({
-      data: {
-        companyId: tenant.companyId,
-        branchId: input.branchId,
-        code: input.code,
-        name: input.name,
-        address: input.address,
-      },
-      select: {
-        id: true,
-      },
-    })
+    return this.prisma.$transaction(async (tx) => {
+      const warehouse = await tx.warehouse.create({
+        data: {
+          companyId: tenant.companyId,
+          branchId: input.branchId,
+          code: input.code,
+          name: input.name,
+          address: input.address,
+        },
+        select: this.warehouseSelect(),
+      })
+      await this.auditService.recordCreate(
+        {
+          tenant,
+          actorUserId,
+          entityType: 'Warehouse',
+          entityId: warehouse.id,
+          newValues: warehouse,
+        },
+        tx,
+      )
 
-    return this.getById(warehouse.id, tenant)
+      return warehouse
+    })
   }
 
-  async update(warehouseId: string, input: UpdateWarehouseInput, tenant: TenantContext) {
-    await this.getById(warehouseId, tenant)
+  async update(
+    warehouseId: string,
+    input: UpdateWarehouseInput,
+    tenant: TenantContext,
+    actorUserId: string,
+  ) {
+    const current = await this.getById(warehouseId, tenant)
     await this.assertBranchBelongsToCompany(input.branchId ?? undefined, tenant)
 
-    await this.prisma.warehouse.update({
-      where: {
-        id: warehouseId,
-      },
-      data: input,
-    })
+    return this.prisma.$transaction(async (tx) => {
+      const updated = await tx.warehouse.update({
+        where: {
+          id: warehouseId,
+        },
+        data: input,
+        select: this.warehouseSelect(),
+      })
+      await this.auditService.recordUpdate(
+        {
+          tenant,
+          actorUserId,
+          entityType: 'Warehouse',
+          entityId: warehouseId,
+          oldValues: current,
+          newValues: updated,
+        },
+        tx,
+      )
 
-    return this.getById(warehouseId, tenant)
+      return updated
+    })
   }
 
   async updateStatus(
     warehouseId: string,
     input: UpdateWarehouseStatusInput,
     tenant: TenantContext,
+    actorUserId: string,
   ) {
-    await this.getById(warehouseId, tenant)
+    const current = await this.getById(warehouseId, tenant)
 
-    return this.prisma.warehouse.update({
-      where: {
-        id: warehouseId,
-      },
-      data: {
-        status: input.status,
-        deletedAt: input.status === RecordStatus.ARCHIVED ? new Date() : null,
-      },
-      select: this.warehouseSelect(),
+    return this.prisma.$transaction(async (tx) => {
+      const updated = await tx.warehouse.update({
+        where: {
+          id: warehouseId,
+        },
+        data: {
+          status: input.status,
+          deletedAt: input.status === RecordStatus.ARCHIVED ? new Date() : null,
+        },
+        select: this.warehouseSelect(),
+      })
+      const auditInput = {
+        tenant,
+        actorUserId,
+        entityType: 'Warehouse',
+        entityId: warehouseId,
+        oldValues: current,
+        newValues: updated,
+      }
+      if (input.status === RecordStatus.ARCHIVED) {
+        await this.auditService.recordDelete(auditInput, tx)
+      } else {
+        await this.auditService.recordUpdate(auditInput, tx)
+      }
+
+      return updated
     })
   }
 
