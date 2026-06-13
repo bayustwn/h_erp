@@ -42,23 +42,32 @@ enum AuditAction {
   CANCEL
 }
 
+enum InventoryItemType {
+  STOCK
+  NON_STOCK
+  SERVICE
+}
+
 model Company {
-  id               String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  code             String    @unique @db.VarChar(50)
-  name             String    @db.VarChar(255)
-  legalName        String?   @map("legal_name") @db.VarChar(255)
-  taxNumber        String?   @map("tax_number") @db.VarChar(100)
-  baseCurrencyCode String    @default("IDR") @map("base_currency_code") @db.Char(3)
-  email            String?   @db.VarChar(255)
-  phone            String?   @db.VarChar(50)
+  id               String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  code             String       @unique @db.VarChar(50)
+  name             String       @db.VarChar(255)
+  legalName        String?      @map("legal_name") @db.VarChar(255)
+  taxNumber        String?      @map("tax_number") @db.VarChar(100)
+  baseCurrencyCode String       @default("IDR") @map("base_currency_code") @db.Char(3)
+  email            String?      @db.VarChar(255)
+  phone            String?      @db.VarChar(50)
   address          String?
   status           RecordStatus @default(ACTIVE)
-  createdAt        DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt        DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
-  deletedAt        DateTime? @map("deleted_at") @db.Timestamptz(6)
+  createdAt        DateTime     @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt        DateTime     @updatedAt @map("updated_at") @db.Timestamptz(6)
+  deletedAt        DateTime?    @map("deleted_at") @db.Timestamptz(6)
 
   branches          Branch[]
   warehouses        Warehouse[]
+  itemCategories    ItemCategory[]
+  unitsOfMeasure    UnitOfMeasure[]
+  inventoryItems    InventoryItem[]
   roles             Role[]
   userRoles         UserRole[]
   userCompanyAccess UserCompanyAccess[]
@@ -71,23 +80,23 @@ model Company {
 
 model Branch {
   id        String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  companyId String      @map("company_id") @db.Uuid
-  code      String      @db.VarChar(50)
-  name      String      @db.VarChar(255)
-  email     String?     @db.VarChar(255)
-  phone     String?     @db.VarChar(50)
+  companyId String       @map("company_id") @db.Uuid
+  code      String       @db.VarChar(50)
+  name      String       @db.VarChar(255)
+  email     String?      @db.VarChar(255)
+  phone     String?      @db.VarChar(50)
   address   String?
   status    RecordStatus @default(ACTIVE)
-  createdAt DateTime    @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt DateTime    @updatedAt @map("updated_at") @db.Timestamptz(6)
-  deletedAt DateTime?   @map("deleted_at") @db.Timestamptz(6)
+  createdAt DateTime     @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime     @updatedAt @map("updated_at") @db.Timestamptz(6)
+  deletedAt DateTime?    @map("deleted_at") @db.Timestamptz(6)
 
-  company            Company @relation(fields: [companyId], references: [id])
-  warehouses         Warehouse[]
-  userBranchAccess   UserBranchAccess[]
-  documentSequences  DocumentSequence[]
-  attachments        Attachment[]
-  auditLogs          AuditLog[]
+  company           Company            @relation(fields: [companyId], references: [id])
+  warehouses        Warehouse[]
+  userBranchAccess  UserBranchAccess[]
+  documentSequences DocumentSequence[]
+  attachments       Attachment[]
+  auditLogs         AuditLog[]
 
   @@unique([companyId, code])
   @@index([companyId])
@@ -97,15 +106,15 @@ model Branch {
 
 model Warehouse {
   id        String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  companyId String      @map("company_id") @db.Uuid
-  branchId  String?     @map("branch_id") @db.Uuid
-  code      String      @db.VarChar(50)
-  name      String      @db.VarChar(255)
+  companyId String       @map("company_id") @db.Uuid
+  branchId  String?      @map("branch_id") @db.Uuid
+  code      String       @db.VarChar(50)
+  name      String       @db.VarChar(255)
   address   String?
   status    RecordStatus @default(ACTIVE)
-  createdAt DateTime    @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt DateTime    @updatedAt @map("updated_at") @db.Timestamptz(6)
-  deletedAt DateTime?   @map("deleted_at") @db.Timestamptz(6)
+  createdAt DateTime     @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime     @updatedAt @map("updated_at") @db.Timestamptz(6)
+  deletedAt DateTime?    @map("deleted_at") @db.Timestamptz(6)
 
   company Company @relation(fields: [companyId], references: [id])
   branch  Branch? @relation(fields: [branchId], references: [id])
@@ -115,6 +124,107 @@ model Warehouse {
   @@index([branchId])
   @@index([status])
   @@map("warehouses")
+}
+
+model ItemCategory {
+  id          String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  companyId   String       @map("company_id") @db.Uuid
+  parentId    String?      @map("parent_id") @db.Uuid
+  code        String       @db.VarChar(50)
+  name        String       @db.VarChar(255)
+  description String?
+  status      RecordStatus @default(ACTIVE)
+  createdAt   DateTime     @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime     @updatedAt @map("updated_at") @db.Timestamptz(6)
+  deletedAt   DateTime?    @map("deleted_at") @db.Timestamptz(6)
+
+  company  Company         @relation(fields: [companyId], references: [id])
+  parent   ItemCategory?   @relation("ItemCategoryHierarchy", fields: [parentId], references: [id])
+  children ItemCategory[]  @relation("ItemCategoryHierarchy")
+  items    InventoryItem[]
+
+  @@unique([companyId, code])
+  @@index([companyId])
+  @@index([parentId])
+  @@index([status])
+  @@map("item_categories")
+}
+
+model UnitOfMeasure {
+  id            String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  companyId     String       @map("company_id") @db.Uuid
+  code          String       @db.VarChar(50)
+  name          String       @db.VarChar(255)
+  symbol        String       @db.VarChar(50)
+  decimalPlaces Int          @default(0) @map("decimal_places")
+  status        RecordStatus @default(ACTIVE)
+  createdAt     DateTime     @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt     DateTime     @updatedAt @map("updated_at") @db.Timestamptz(6)
+  deletedAt     DateTime?    @map("deleted_at") @db.Timestamptz(6)
+
+  company         Company              @relation(fields: [companyId], references: [id])
+  baseItems       InventoryItem[]      @relation("InventoryItemBaseUnit")
+  conversionsFrom ItemUnitConversion[] @relation("ItemUnitConversionFromUnit")
+  conversionsTo   ItemUnitConversion[] @relation("ItemUnitConversionToUnit")
+
+  @@unique([companyId, code])
+  @@index([companyId])
+  @@index([status])
+  @@map("units_of_measure")
+}
+
+model InventoryItem {
+  id             String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  companyId      String            @map("company_id") @db.Uuid
+  categoryId     String?           @map("category_id") @db.Uuid
+  baseUnitId     String            @map("base_unit_id") @db.Uuid
+  sku            String            @db.VarChar(100)
+  name           String            @db.VarChar(255)
+  description    String?
+  barcode        String?           @db.VarChar(100)
+  itemType       InventoryItemType @default(STOCK) @map("item_type")
+  trackInventory Boolean           @default(true) @map("track_inventory")
+  isSellable     Boolean           @default(true) @map("is_sellable")
+  isPurchasable  Boolean           @default(true) @map("is_purchasable")
+  minStock       Decimal?          @map("min_stock") @db.Decimal(19, 4)
+  status         RecordStatus      @default(ACTIVE)
+  createdAt      DateTime          @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt      DateTime          @updatedAt @map("updated_at") @db.Timestamptz(6)
+  deletedAt      DateTime?         @map("deleted_at") @db.Timestamptz(6)
+
+  company     Company              @relation(fields: [companyId], references: [id])
+  category    ItemCategory?        @relation(fields: [categoryId], references: [id])
+  baseUnit    UnitOfMeasure        @relation("InventoryItemBaseUnit", fields: [baseUnitId], references: [id])
+  conversions ItemUnitConversion[]
+
+  @@unique([companyId, sku])
+  @@unique([companyId, barcode])
+  @@index([companyId])
+  @@index([categoryId])
+  @@index([baseUnitId])
+  @@index([itemType])
+  @@index([status])
+  @@map("inventory_items")
+}
+
+model ItemUnitConversion {
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  itemId     String   @map("item_id") @db.Uuid
+  fromUnitId String   @map("from_unit_id") @db.Uuid
+  toUnitId   String   @map("to_unit_id") @db.Uuid
+  factor     Decimal  @db.Decimal(19, 6)
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt  DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  item     InventoryItem @relation(fields: [itemId], references: [id])
+  fromUnit UnitOfMeasure @relation("ItemUnitConversionFromUnit", fields: [fromUnitId], references: [id])
+  toUnit   UnitOfMeasure @relation("ItemUnitConversionToUnit", fields: [toUnitId], references: [id])
+
+  @@unique([itemId, fromUnitId, toUnitId])
+  @@index([itemId])
+  @@index([fromUnitId])
+  @@index([toUnitId])
+  @@map("item_unit_conversions")
 }
 
 model User {
@@ -129,12 +239,12 @@ model User {
   updatedAt    DateTime     @updatedAt @map("updated_at") @db.Timestamptz(6)
   deletedAt    DateTime?    @map("deleted_at") @db.Timestamptz(6)
 
-  roles                UserRole[]
-  companyAccess        UserCompanyAccess[]
-  branchAccess         UserBranchAccess[]
-  authSessions         AuthSession[]
-  uploadedAttachments  Attachment[] @relation("AttachmentUploadedBy")
-  auditLogs            AuditLog[]   @relation("AuditActor")
+  roles               UserRole[]
+  companyAccess       UserCompanyAccess[]
+  branchAccess        UserBranchAccess[]
+  authSessions        AuthSession[]
+  uploadedAttachments Attachment[]        @relation("AttachmentUploadedBy")
+  auditLogs           AuditLog[]          @relation("AuditActor")
 
   @@index([status])
   @@map("users")
@@ -192,7 +302,7 @@ model Role {
   updatedAt   DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
   deletedAt   DateTime? @map("deleted_at") @db.Timestamptz(6)
 
-  company     Company? @relation(fields: [companyId], references: [id])
+  company     Company?         @relation(fields: [companyId], references: [id])
   users       UserRole[]
   permissions RolePermission[]
 
