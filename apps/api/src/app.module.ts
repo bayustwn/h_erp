@@ -6,6 +6,7 @@ import { BranchesModule } from './branches/branches.module.js'
 import { RequestLoggerMiddleware } from './common/http/request-logger.middleware.js'
 import { CompaniesModule } from './companies/companies.module.js'
 import { loadAppConfig } from './config/env.config.js'
+import { DocumentSequencesModule } from './document-sequences/document-sequences.module.js'
 import { HealthModule } from './health/health.module.js'
 import { InventoryModule } from './inventory/inventory.module.js'
 import { PrismaModule } from './prisma/prisma.module.js'
@@ -26,6 +27,7 @@ import { WarehousesModule } from './warehouses/warehouses.module.js'
     BranchesModule,
     WarehousesModule,
     InventoryModule,
+    DocumentSequencesModule,
     UsersModule,
     HealthModule,
   ],

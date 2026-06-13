@@ -467,6 +467,7 @@ model DocumentSequence {
   documentType String      @map("document_type") @db.VarChar(100)
   prefix       String      @db.VarChar(100)
   periodFormat String      @map("period_format") @db.VarChar(50)
+  lastPeriod   String?     @map("last_period") @db.VarChar(50)
   nextNumber   Int         @default(1) @map("next_number")
   padding      Int         @default(5)
   resetPolicy  ResetPolicy @default(MONTHLY) @map("reset_policy")
