@@ -1,0 +1,13 @@
+node_modules/
+dist/
+build/
+.turbo/
+.npm-cache/
+.env
+.env.*
+docs/
+!.env.example
+coverage/
+*.log
+*.tsbuildinfo
+apps/api/src/generated/

@@ -1,0 +1,7 @@
+node_modules
+dist
+build
+coverage
+docs
+apps/api/src/generated
+package-lock.json

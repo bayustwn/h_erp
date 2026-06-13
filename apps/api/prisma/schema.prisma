@@ -1,0 +1,311 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum RecordStatus {
+  ACTIVE
+  INACTIVE
+  ARCHIVED
+}
+
+enum AccessScope {
+  ALL_COMPANIES
+  COMPANY
+  BRANCH
+  OWN
+}
+
+enum ResetPolicy {
+  NEVER
+  YEARLY
+  MONTHLY
+}
+
+enum AuditAction {
+  CREATE
+  UPDATE
+  DELETE
+  RESTORE
+  LOGIN
+  LOGOUT
+  APPROVE
+  REJECT
+  POST
+  CANCEL
+}
+
+model Company {
+  id               String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  code             String    @unique @db.VarChar(50)
+  name             String    @db.VarChar(255)
+  legalName        String?   @map("legal_name") @db.VarChar(255)
+  taxNumber        String?   @map("tax_number") @db.VarChar(100)
+  baseCurrencyCode String    @default("IDR") @map("base_currency_code") @db.Char(3)
+  email            String?   @db.VarChar(255)
+  phone            String?   @db.VarChar(50)
+  address          String?
+  status           RecordStatus @default(ACTIVE)
+  createdAt        DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt        DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+  deletedAt        DateTime? @map("deleted_at") @db.Timestamptz(6)
+
+  branches          Branch[]
+  warehouses        Warehouse[]
+  roles             Role[]
+  userRoles         UserRole[]
+  userCompanyAccess UserCompanyAccess[]
+  documentSequences DocumentSequence[]
+  attachments       Attachment[]
+  auditLogs         AuditLog[]
+
+  @@map("companies")
+}
+
+model Branch {
+  id        String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  companyId String      @map("company_id") @db.Uuid
+  code      String      @db.VarChar(50)
+  name      String      @db.VarChar(255)
+  email     String?     @db.VarChar(255)
+  phone     String?     @db.VarChar(50)
+  address   String?
+  status    RecordStatus @default(ACTIVE)
+  createdAt DateTime    @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime    @updatedAt @map("updated_at") @db.Timestamptz(6)
+  deletedAt DateTime?   @map("deleted_at") @db.Timestamptz(6)
+
+  company            Company @relation(fields: [companyId], references: [id])
+  warehouses         Warehouse[]
+  userBranchAccess   UserBranchAccess[]
+  documentSequences  DocumentSequence[]
+  attachments        Attachment[]
+  auditLogs          AuditLog[]
+
+  @@unique([companyId, code])
+  @@index([companyId])
+  @@index([status])
+  @@map("branches")
+}
+
+model Warehouse {
+  id        String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  companyId String      @map("company_id") @db.Uuid
+  branchId  String?     @map("branch_id") @db.Uuid
+  code      String      @db.VarChar(50)
+  name      String      @db.VarChar(255)
+  address   String?
+  status    RecordStatus @default(ACTIVE)
+  createdAt DateTime    @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime    @updatedAt @map("updated_at") @db.Timestamptz(6)
+  deletedAt DateTime?   @map("deleted_at") @db.Timestamptz(6)
+
+  company Company @relation(fields: [companyId], references: [id])
+  branch  Branch? @relation(fields: [branchId], references: [id])
+
+  @@unique([companyId, code])
+  @@index([companyId])
+  @@index([branchId])
+  @@index([status])
+  @@map("warehouses")
+}
+
+model User {
+  id           String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  email        String       @unique @db.VarChar(255)
+  passwordHash String       @map("password_hash") @db.VarChar(255)
+  fullName     String       @map("full_name") @db.VarChar(255)
+  phone        String?      @db.VarChar(50)
+  status       RecordStatus @default(ACTIVE)
+  lastLoginAt  DateTime?    @map("last_login_at") @db.Timestamptz(6)
+  createdAt    DateTime     @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt    DateTime     @updatedAt @map("updated_at") @db.Timestamptz(6)
+  deletedAt    DateTime?    @map("deleted_at") @db.Timestamptz(6)
+
+  roles                UserRole[]
+  companyAccess        UserCompanyAccess[]
+  branchAccess         UserBranchAccess[]
+  uploadedAttachments  Attachment[] @relation("AttachmentUploadedBy")
+  auditLogs            AuditLog[]   @relation("AuditActor")
+
+  @@index([status])
+  @@map("users")
+}
+
+model Role {
+  id          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  companyId   String?   @map("company_id") @db.Uuid
+  code        String    @db.VarChar(100)
+  name        String    @db.VarChar(255)
+  description String?
+  isSystem    Boolean   @default(false) @map("is_system")
+  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+  deletedAt   DateTime? @map("deleted_at") @db.Timestamptz(6)
+
+  company     Company? @relation(fields: [companyId], references: [id])
+  users       UserRole[]
+  permissions RolePermission[]
+
+  @@unique([companyId, code])
+  @@index([companyId])
+  @@map("roles")
+}
+
+model Permission {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  module      String   @db.VarChar(100)
+  action      String   @db.VarChar(100)
+  code        String   @unique @db.VarChar(200)
+  description String?
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  roles RolePermission[]
+
+  @@index([module])
+  @@map("permissions")
+}
+
+model UserRole {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  roleId    String   @map("role_id") @db.Uuid
+  companyId String?  @map("company_id") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  user    User     @relation(fields: [userId], references: [id])
+  role    Role     @relation(fields: [roleId], references: [id])
+  company Company? @relation(fields: [companyId], references: [id])
+
+  @@unique([userId, roleId, companyId])
+  @@index([userId])
+  @@index([roleId])
+  @@index([companyId])
+  @@map("user_roles")
+}
+
+model RolePermission {
+  id           String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  roleId       String   @map("role_id") @db.Uuid
+  permissionId String   @map("permission_id") @db.Uuid
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  role       Role       @relation(fields: [roleId], references: [id])
+  permission Permission @relation(fields: [permissionId], references: [id])
+
+  @@unique([roleId, permissionId])
+  @@index([roleId])
+  @@index([permissionId])
+  @@map("role_permissions")
+}
+
+model UserCompanyAccess {
+  id          String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId      String      @map("user_id") @db.Uuid
+  companyId   String      @map("company_id") @db.Uuid
+  accessScope AccessScope @map("access_scope")
+  createdAt   DateTime    @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  user    User    @relation(fields: [userId], references: [id])
+  company Company @relation(fields: [companyId], references: [id])
+
+  @@unique([userId, companyId])
+  @@index([userId])
+  @@index([companyId])
+  @@map("user_company_access")
+}
+
+model UserBranchAccess {
+  id          String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId      String      @map("user_id") @db.Uuid
+  branchId    String      @map("branch_id") @db.Uuid
+  accessScope AccessScope @map("access_scope")
+  createdAt   DateTime    @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  user   User   @relation(fields: [userId], references: [id])
+  branch Branch @relation(fields: [branchId], references: [id])
+
+  @@unique([userId, branchId])
+  @@index([userId])
+  @@index([branchId])
+  @@map("user_branch_access")
+}
+
+model DocumentSequence {
+  id           String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  companyId    String      @map("company_id") @db.Uuid
+  branchId     String?     @map("branch_id") @db.Uuid
+  documentType String      @map("document_type") @db.VarChar(100)
+  prefix       String      @db.VarChar(100)
+  periodFormat String      @map("period_format") @db.VarChar(50)
+  nextNumber   Int         @default(1) @map("next_number")
+  padding      Int         @default(5)
+  resetPolicy  ResetPolicy @default(MONTHLY) @map("reset_policy")
+  isActive     Boolean     @default(true) @map("is_active")
+  createdAt    DateTime    @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt    DateTime    @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  company Company @relation(fields: [companyId], references: [id])
+  branch  Branch? @relation(fields: [branchId], references: [id])
+
+  @@unique([companyId, branchId, documentType, periodFormat])
+  @@index([companyId])
+  @@index([branchId])
+  @@map("document_sequences")
+}
+
+model Attachment {
+  id           String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  companyId    String    @map("company_id") @db.Uuid
+  branchId     String?   @map("branch_id") @db.Uuid
+  entityType   String    @map("entity_type") @db.VarChar(100)
+  entityId     String    @map("entity_id") @db.Uuid
+  bucket       String    @db.VarChar(100)
+  objectPath   String    @map("object_path")
+  originalName String    @map("original_name") @db.VarChar(255)
+  mimeType     String    @map("mime_type") @db.VarChar(255)
+  sizeBytes    BigInt    @map("size_bytes")
+  checksum     String?   @db.VarChar(255)
+  uploadedById String?   @map("uploaded_by_id") @db.Uuid
+  createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  deletedAt    DateTime? @map("deleted_at") @db.Timestamptz(6)
+
+  company    Company @relation(fields: [companyId], references: [id])
+  branch     Branch? @relation(fields: [branchId], references: [id])
+  uploadedBy User?   @relation("AttachmentUploadedBy", fields: [uploadedById], references: [id])
+
+  @@index([companyId])
+  @@index([branchId])
+  @@index([entityType, entityId])
+  @@map("attachments")
+}
+
+model AuditLog {
+  id          String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  companyId   String?     @map("company_id") @db.Uuid
+  branchId    String?     @map("branch_id") @db.Uuid
+  actorUserId String?     @map("actor_user_id") @db.Uuid
+  action      AuditAction
+  entityType  String      @map("entity_type") @db.VarChar(100)
+  entityId    String?     @map("entity_id") @db.Uuid
+  oldValues   Json?       @map("old_values")
+  newValues   Json?       @map("new_values")
+  ipAddress   String?     @map("ip_address") @db.VarChar(100)
+  userAgent   String?     @map("user_agent")
+  createdAt   DateTime    @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  company Company? @relation(fields: [companyId], references: [id])
+  branch  Branch?  @relation(fields: [branchId], references: [id])
+  actor   User?    @relation("AuditActor", fields: [actorUserId], references: [id])
+
+  @@index([companyId])
+  @@index([branchId])
+  @@index([actorUserId])
+  @@index([entityType, entityId])
+  @@index([createdAt])
+  @@map("audit_logs")
+}
