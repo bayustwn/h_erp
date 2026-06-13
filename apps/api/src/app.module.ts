@@ -6,6 +6,7 @@ import { RequestLoggerMiddleware } from './common/http/request-logger.middleware
 import { loadAppConfig } from './config/env.config.js'
 import { HealthModule } from './health/health.module.js'
 import { PrismaModule } from './prisma/prisma.module.js'
+import { UsersModule } from './users/users.module.js'
 
 @Module({
   imports: [
@@ -17,6 +18,7 @@ import { PrismaModule } from './prisma/prisma.module.js'
     PrismaModule,
     AuthModule,
     AccessControlModule,
+    UsersModule,
     HealthModule,
   ],
 })
