@@ -32,7 +32,10 @@ enum AuditAction {
   DELETE
   RESTORE
   LOGIN
+  LOGIN_FAILED
   LOGOUT
+  TOKEN_REFRESH
+  TOKEN_REUSE
   APPROVE
   REJECT
   POST
@@ -129,11 +132,53 @@ model User {
   roles                UserRole[]
   companyAccess        UserCompanyAccess[]
   branchAccess         UserBranchAccess[]
+  authSessions         AuthSession[]
   uploadedAttachments  Attachment[] @relation("AttachmentUploadedBy")
   auditLogs            AuditLog[]   @relation("AuditActor")
 
   @@index([status])
   @@map("users")
+}
+
+model AuthSession {
+  id               String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId           String    @map("user_id") @db.Uuid
+  refreshTokenHash String    @unique @map("refresh_token_hash") @db.VarChar(255)
+  userAgent        String?   @map("user_agent")
+  ipAddress        String?   @map("ip_address") @db.VarChar(100)
+  expiresAt        DateTime  @map("expires_at") @db.Timestamptz(6)
+  lastUsedAt       DateTime? @map("last_used_at") @db.Timestamptz(6)
+  revokedAt        DateTime? @map("revoked_at") @db.Timestamptz(6)
+  compromisedAt    DateTime? @map("compromised_at") @db.Timestamptz(6)
+  createdAt        DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt        DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  user          User               @relation(fields: [userId], references: [id])
+  refreshTokens AuthRefreshToken[]
+
+  @@index([userId])
+  @@index([expiresAt])
+  @@index([revokedAt])
+  @@index([compromisedAt])
+  @@map("auth_sessions")
+}
+
+model AuthRefreshToken {
+  id        String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  sessionId String    @map("session_id") @db.Uuid
+  tokenHash String    @unique @map("token_hash") @db.VarChar(255)
+  expiresAt DateTime  @map("expires_at") @db.Timestamptz(6)
+  usedAt    DateTime? @map("used_at") @db.Timestamptz(6)
+  revokedAt DateTime? @map("revoked_at") @db.Timestamptz(6)
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  session AuthSession @relation(fields: [sessionId], references: [id])
+
+  @@index([sessionId])
+  @@index([expiresAt])
+  @@index([usedAt])
+  @@index([revokedAt])
+  @@map("auth_refresh_tokens")
 }
 
 model Role {
