@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Patch, Query, UseGuards } from '@nestjs/common'
+import { Body, Controller, Get, Inject, Patch, Query, UseGuards } from '@nestjs/common'
 import { PermissionGuard } from '../access-control/permission.guard.js'
 import { RequirePermissions } from '../access-control/permissions.decorator.js'
 import { CurrentTenant, RequireTenant } from '../access-control/tenant.decorator.js'
@@ -16,7 +16,9 @@ import { CompaniesService } from './companies.service.js'
 
 @Controller('companies')
 export class CompaniesController {
-  constructor(private readonly companiesService: CompaniesService) {}
+  constructor(
+    @Inject(CompaniesService) private readonly companiesService: CompaniesService,
+  ) {}
 
   @Get()
   @UseGuards(AuthGuard, PermissionGuard)

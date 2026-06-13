@@ -1,4 +1,4 @@
-import { ConflictException, Injectable, NotFoundException } from '@nestjs/common'
+import { ConflictException, Inject, Injectable, NotFoundException } from '@nestjs/common'
 import {
   createPaginationMeta,
   getPaginationSkipTake,
@@ -15,7 +15,7 @@ import type {
 
 @Injectable()
 export class BranchesService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(@Inject(PrismaService) private readonly prisma: PrismaService) {}
 
   async list(query: BranchesQuery, tenant: TenantContext) {
     const pagination = {

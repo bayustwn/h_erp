@@ -2,6 +2,7 @@ import {
   Body,
   Controller,
   Get,
+  Inject,
   Param,
   Patch,
   Post,
@@ -39,7 +40,7 @@ import { UsersService } from './users.service.js'
 @UseGuards(AuthGuard, TenantGuard, PermissionGuard)
 @RequireTenant()
 export class UsersController {
-  constructor(private readonly usersService: UsersService) {}
+  constructor(@Inject(UsersService) private readonly usersService: UsersService) {}
 
   @Get()
   @RequirePermissions('user.read')

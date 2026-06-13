@@ -2,6 +2,7 @@ import {
   BadRequestException,
   CanActivate,
   ExecutionContext,
+  Inject,
   Injectable,
   UnauthorizedException,
 } from '@nestjs/common'
@@ -19,7 +20,8 @@ const uuidSchema = z.uuid()
 @Injectable()
 export class TenantGuard implements CanActivate {
   constructor(
-    private readonly reflector: Reflector,
+    @Inject(Reflector) private readonly reflector: Reflector,
+    @Inject(AccessControlService)
     private readonly accessControlService: AccessControlService,
   ) {}
 

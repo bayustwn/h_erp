@@ -1,4 +1,4 @@
-import { ForbiddenException, Injectable } from '@nestjs/common'
+import { ForbiddenException, Inject, Injectable } from '@nestjs/common'
 import { AccessScope, RecordStatus } from '../generated/prisma/enums.js'
 import { PrismaService } from '../prisma/prisma.service.js'
 import type { TenantContext } from './access-control.types.js'
@@ -7,7 +7,7 @@ const SUPER_ADMIN_ROLE_CODE = 'SUPER_ADMIN'
 
 @Injectable()
 export class AccessControlService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(@Inject(PrismaService) private readonly prisma: PrismaService) {}
 
   async assertTenantAccess(userId: string, tenant: TenantContext) {
     if (await this.isSuperAdmin(userId)) {

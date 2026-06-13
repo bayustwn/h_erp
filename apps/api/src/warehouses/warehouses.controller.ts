@@ -2,6 +2,7 @@ import {
   Body,
   Controller,
   Get,
+  Inject,
   Param,
   Patch,
   Post,
@@ -32,7 +33,9 @@ import { WarehousesService } from './warehouses.service.js'
 @UseGuards(AuthGuard, TenantGuard, PermissionGuard)
 @RequireTenant()
 export class WarehousesController {
-  constructor(private readonly warehousesService: WarehousesService) {}
+  constructor(
+    @Inject(WarehousesService) private readonly warehousesService: WarehousesService,
+  ) {}
 
   @Get()
   @RequirePermissions('warehouse.read')

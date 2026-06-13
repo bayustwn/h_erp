@@ -2,6 +2,7 @@ import {
   Body,
   Controller,
   Get,
+  Inject,
   Param,
   Patch,
   Post,
@@ -44,7 +45,9 @@ import { InventoryService } from './inventory.service.js'
 @UseGuards(AuthGuard, TenantGuard, PermissionGuard)
 @RequireTenant()
 export class InventoryController {
-  constructor(private readonly inventoryService: InventoryService) {}
+  constructor(
+    @Inject(InventoryService) private readonly inventoryService: InventoryService,
+  ) {}
 
   @Get('units')
   @RequirePermissions('inventory.item.read')

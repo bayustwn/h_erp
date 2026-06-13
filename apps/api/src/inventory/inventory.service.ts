@@ -1,5 +1,6 @@
 import {
   ConflictException,
+  Inject,
   Injectable,
   NotFoundException,
   UnprocessableEntityException,
@@ -26,7 +27,7 @@ import type {
 
 @Injectable()
 export class InventoryService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(@Inject(PrismaService) private readonly prisma: PrismaService) {}
 
   async listUnits(query: UnitsQuery, tenant: TenantContext) {
     const pagination = { page: query.page, pageSize: query.pageSize }

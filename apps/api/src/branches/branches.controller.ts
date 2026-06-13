@@ -2,6 +2,7 @@ import {
   Body,
   Controller,
   Get,
+  Inject,
   Param,
   Patch,
   Post,
@@ -32,7 +33,9 @@ import { BranchesService } from './branches.service.js'
 @UseGuards(AuthGuard, TenantGuard, PermissionGuard)
 @RequireTenant()
 export class BranchesController {
-  constructor(private readonly branchesService: BranchesService) {}
+  constructor(
+    @Inject(BranchesService) private readonly branchesService: BranchesService,
+  ) {}
 
   @Get()
   @RequirePermissions('branch.read')

@@ -48,6 +48,21 @@ enum InventoryItemType {
   SERVICE
 }
 
+enum StockMovementType {
+  ADJUSTMENT_IN
+  ADJUSTMENT_OUT
+  TRANSFER_OUT
+  TRANSFER_IN
+}
+
+enum StockMovementSourceType {
+  ADJUSTMENT
+  TRANSFER
+  PURCHASE_RECEIPT
+  SALES_DELIVERY
+  OPENING_BALANCE
+}
+
 model Company {
   id               String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   code             String       @unique @db.VarChar(50)
@@ -68,6 +83,8 @@ model Company {
   itemCategories    ItemCategory[]
   unitsOfMeasure    UnitOfMeasure[]
   inventoryItems    InventoryItem[]
+  stockBalances     StockBalance[]
+  stockMovements    StockMovement[]
   roles             Role[]
   userRoles         UserRole[]
   userCompanyAccess UserCompanyAccess[]
@@ -116,8 +133,10 @@ model Warehouse {
   updatedAt DateTime     @updatedAt @map("updated_at") @db.Timestamptz(6)
   deletedAt DateTime?    @map("deleted_at") @db.Timestamptz(6)
 
-  company Company @relation(fields: [companyId], references: [id])
-  branch  Branch? @relation(fields: [branchId], references: [id])
+  company        Company         @relation(fields: [companyId], references: [id])
+  branch         Branch?         @relation(fields: [branchId], references: [id])
+  stockBalances  StockBalance[]
+  stockMovements StockMovement[]
 
   @@unique([companyId, code])
   @@index([companyId])
@@ -192,10 +211,12 @@ model InventoryItem {
   updatedAt      DateTime          @updatedAt @map("updated_at") @db.Timestamptz(6)
   deletedAt      DateTime?         @map("deleted_at") @db.Timestamptz(6)
 
-  company     Company              @relation(fields: [companyId], references: [id])
-  category    ItemCategory?        @relation(fields: [categoryId], references: [id])
-  baseUnit    UnitOfMeasure        @relation("InventoryItemBaseUnit", fields: [baseUnitId], references: [id])
-  conversions ItemUnitConversion[]
+  company        Company              @relation(fields: [companyId], references: [id])
+  category       ItemCategory?        @relation(fields: [categoryId], references: [id])
+  baseUnit       UnitOfMeasure        @relation("InventoryItemBaseUnit", fields: [baseUnitId], references: [id])
+  conversions    ItemUnitConversion[]
+  stockBalances  StockBalance[]
+  stockMovements StockMovement[]
 
   @@unique([companyId, sku])
   @@unique([companyId, barcode])
@@ -227,6 +248,54 @@ model ItemUnitConversion {
   @@map("item_unit_conversions")
 }
 
+model StockBalance {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  companyId   String   @map("company_id") @db.Uuid
+  warehouseId String   @map("warehouse_id") @db.Uuid
+  itemId      String   @map("item_id") @db.Uuid
+  quantity    Decimal  @default(0) @db.Decimal(19, 4)
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  company   Company       @relation(fields: [companyId], references: [id])
+  warehouse Warehouse     @relation(fields: [warehouseId], references: [id])
+  item      InventoryItem @relation(fields: [itemId], references: [id])
+
+  @@unique([companyId, warehouseId, itemId])
+  @@index([companyId])
+  @@index([warehouseId])
+  @@index([itemId])
+  @@map("stock_balances")
+}
+
+model StockMovement {
+  id           String                  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  companyId    String                  @map("company_id") @db.Uuid
+  warehouseId  String                  @map("warehouse_id") @db.Uuid
+  itemId       String                  @map("item_id") @db.Uuid
+  movementType StockMovementType       @map("movement_type")
+  sourceType   StockMovementSourceType @map("source_type")
+  sourceId     String?                 @map("source_id") @db.Uuid
+  quantity     Decimal                 @db.Decimal(19, 4)
+  balanceAfter Decimal                 @map("balance_after") @db.Decimal(19, 4)
+  notes        String?
+  createdById  String?                 @map("created_by_id") @db.Uuid
+  occurredAt   DateTime                @default(now()) @map("occurred_at") @db.Timestamptz(6)
+  createdAt    DateTime                @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  company   Company       @relation(fields: [companyId], references: [id])
+  warehouse Warehouse     @relation(fields: [warehouseId], references: [id])
+  item      InventoryItem @relation(fields: [itemId], references: [id])
+  createdBy User?         @relation("StockMovementCreatedBy", fields: [createdById], references: [id])
+
+  @@index([companyId])
+  @@index([warehouseId])
+  @@index([itemId])
+  @@index([sourceType, sourceId])
+  @@index([occurredAt])
+  @@map("stock_movements")
+}
+
 model User {
   id           String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   email        String       @unique @db.VarChar(255)
@@ -245,6 +314,7 @@ model User {
   authSessions        AuthSession[]
   uploadedAttachments Attachment[]        @relation("AttachmentUploadedBy")
   auditLogs           AuditLog[]          @relation("AuditActor")
+  stockMovements      StockMovement[]     @relation("StockMovementCreatedBy")
 
   @@index([status])
   @@map("users")

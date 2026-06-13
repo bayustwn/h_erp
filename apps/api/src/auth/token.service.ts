@@ -1,4 +1,4 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common'
+import { Inject, Injectable, UnauthorizedException } from '@nestjs/common'
 import { ConfigService, ConfigType } from '@nestjs/config'
 import { createHash, randomBytes } from 'node:crypto'
 import { SignJWT, jwtVerify } from 'jose'
@@ -10,7 +10,7 @@ export class TokenService {
   private readonly appConfig: ConfigType<typeof loadAppConfig>
   private readonly accessSecret: Uint8Array
 
-  constructor(configService: ConfigService) {
+  constructor(@Inject(ConfigService) configService: ConfigService) {
     this.appConfig = configService.getOrThrow<ConfigType<typeof loadAppConfig>>('app')
     this.accessSecret = new TextEncoder().encode(this.appConfig.jwtAccessSecret)
   }

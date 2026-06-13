@@ -1,4 +1,4 @@
-import { HttpException, HttpStatus, Injectable } from '@nestjs/common'
+import { HttpException, HttpStatus, Inject, Injectable } from '@nestjs/common'
 import { ConfigService, ConfigType } from '@nestjs/config'
 import { createHash } from 'node:crypto'
 import { loadAppConfig } from '../config/env.config.js'
@@ -9,8 +9,8 @@ export class AuthRateLimiterService {
   private readonly appConfig: ConfigType<typeof loadAppConfig>
 
   constructor(
-    configService: ConfigService,
-    private readonly redisService: RedisService,
+    @Inject(ConfigService) configService: ConfigService,
+    @Inject(RedisService) private readonly redisService: RedisService,
   ) {
     this.appConfig = configService.getOrThrow<ConfigType<typeof loadAppConfig>>('app')
   }

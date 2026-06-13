@@ -1,4 +1,13 @@
-import { Body, Controller, Get, Post, Req, UseGuards, UsePipes } from '@nestjs/common'
+import {
+  Body,
+  Controller,
+  Get,
+  Inject,
+  Post,
+  Req,
+  UseGuards,
+  UsePipes,
+} from '@nestjs/common'
 import { ZodValidationPipe } from '../common/validation/zod-validation.pipe.js'
 import { AuthService } from './auth.service.js'
 import { AuthGuard, type AuthenticatedRequest } from './auth.guard.js'
@@ -20,7 +29,7 @@ type RequestWithMetadata = AuthenticatedRequest & {
 
 @Controller('auth')
 export class AuthController {
-  constructor(private readonly authService: AuthService) {}
+  constructor(@Inject(AuthService) private readonly authService: AuthService) {}
 
   @Post('login')
   @UsePipes(new ZodValidationPipe(loginSchema))
