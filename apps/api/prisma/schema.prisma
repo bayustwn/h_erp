@@ -104,6 +104,7 @@ model Company {
   paymentMethods    PaymentMethod[]
   bankAccounts      BankAccount[]
   chartOfAccounts   ChartOfAccount[]
+  productAccountingMappings ProductAccountingMapping[]
 
   @@map("companies")
 }
@@ -174,6 +175,7 @@ model ItemCategory {
   parent   ItemCategory?   @relation("ItemCategoryHierarchy", fields: [parentId], references: [id])
   children ItemCategory[]  @relation("ItemCategoryHierarchy")
   items    InventoryItem[]
+  productAccountingMappings ProductAccountingMapping[]
 
   @@unique([companyId, code])
   @@index([companyId])
@@ -232,6 +234,7 @@ model InventoryItem {
   stockBalances  StockBalance[]
   stockMovements StockMovement[]
   priceListItems  PriceListItem[]
+  productAccountingMappings ProductAccountingMapping[]
 
   @@unique([companyId, sku])
   @@unique([companyId, barcode])
@@ -742,9 +745,13 @@ model ChartOfAccount {
   updatedAt   DateTime     @updatedAt @map("updated_at") @db.Timestamptz(6)
   deletedAt   DateTime?    @map("deleted_at") @db.Timestamptz(6)
 
-  company  Company          @relation(fields: [companyId], references: [id])
-  parent   ChartOfAccount?  @relation("ChartOfAccountHierarchy", fields: [parentId], references: [id])
-  children ChartOfAccount[] @relation("ChartOfAccountHierarchy")
+  company          Company                        @relation(fields: [companyId], references: [id])
+  parent           ChartOfAccount?                 @relation("ChartOfAccountHierarchy", fields: [parentId], references: [id])
+  children         ChartOfAccount[]                @relation("ChartOfAccountHierarchy")
+  revenueMappings  ProductAccountingMapping[]      @relation("RevenueAccount")
+  cogsMappings     ProductAccountingMapping[]      @relation("CogsAccount")
+  inventoryMappings ProductAccountingMapping[]     @relation("InventoryAccount")
+  purchaseMappings ProductAccountingMapping[]      @relation("PurchaseAccount")
 
   @@unique([companyId, code])
   @@index([companyId])
@@ -760,5 +767,33 @@ enum AccountType {
   EQUITY
   REVENUE
   EXPENSE
+}
+
+model ProductAccountingMapping {
+  id                 String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  companyId          String  @map("company_id") @db.Uuid
+  itemCategoryId     String? @map("item_category_id") @db.Uuid
+  itemId             String? @map("item_id") @db.Uuid
+  revenueAccountId   String? @map("revenue_account_id") @db.Uuid
+  cogsAccountId      String? @map("cogs_account_id") @db.Uuid
+  inventoryAccountId String? @map("inventory_account_id") @db.Uuid
+  purchaseAccountId  String? @map("purchase_account_id") @db.Uuid
+  createdAt          DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt          DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  company          Company         @relation(fields: [companyId], references: [id])
+  itemCategory     ItemCategory?   @relation(fields: [itemCategoryId], references: [id])
+  item             InventoryItem?  @relation(fields: [itemId], references: [id])
+  revenueAccount   ChartOfAccount? @relation("RevenueAccount", fields: [revenueAccountId], references: [id])
+  cogsAccount      ChartOfAccount? @relation("CogsAccount", fields: [cogsAccountId], references: [id])
+  inventoryAccount ChartOfAccount? @relation("InventoryAccount", fields: [inventoryAccountId], references: [id])
+  purchaseAccount  ChartOfAccount? @relation("PurchaseAccount", fields: [purchaseAccountId], references: [id])
+
+  @@unique([companyId, itemCategoryId])
+  @@unique([companyId, itemId])
+  @@index([companyId])
+  @@index([itemCategoryId])
+  @@index([itemId])
+  @@map("product_accounting_mappings")
 }
 

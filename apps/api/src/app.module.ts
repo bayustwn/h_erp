@@ -10,6 +10,7 @@ import { ChartOfAccountsModule } from './chart-of-accounts/chart-of-accounts.mod
 import { CustomersModule } from './customers/customers.module.js'
 import { PaymentMethodsModule } from './payment-methods/payment-methods.module.js'
 import { PaymentTermsModule } from './payment-terms/payment-terms.module.js'
+import { ProductAccountingMappingsModule } from './product-accounting-mappings/product-accounting-mappings.module.js'
 import { PriceListsModule } from './price-lists/price-lists.module.js'
 import { SuppliersModule } from './suppliers/suppliers.module.js'
 import { TaxesModule } from './taxes/taxes.module.js'
@@ -42,6 +43,7 @@ import { WarehousesModule } from './warehouses/warehouses.module.js'
     PaymentMethodsModule,
     PaymentTermsModule,
     PriceListsModule,
+    ProductAccountingMappingsModule,
     SuppliersModule,
     TaxesModule,
     WarehousesModule,
