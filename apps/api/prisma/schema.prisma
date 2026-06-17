@@ -92,6 +92,7 @@ model Company {
   attachments       Attachment[]
   auditLogs         AuditLog[]
   customers         Customer[]
+  suppliers         Supplier[]
 
   @@map("companies")
 }
@@ -560,3 +561,28 @@ model Customer {
   @@index([status])
   @@map("customers")
 }
+
+model Supplier {
+  id          String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  companyId   String       @map("company_id") @db.Uuid
+  code        String       @db.VarChar(50)
+  name        String       @db.VarChar(255)
+  phone       String?      @db.VarChar(50)
+  email       String?      @db.VarChar(255)
+  address     String?
+  taxNumber   String?      @map("tax_number") @db.VarChar(100)
+  creditLimit Decimal?     @map("credit_limit") @db.Decimal(19, 4)
+  paymentTerm String?      @map("payment_term") @db.VarChar(50)
+  status      RecordStatus @default(ACTIVE)
+  createdAt   DateTime     @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime     @updatedAt @map("updated_at") @db.Timestamptz(6)
+  deletedAt   DateTime?    @map("deleted_at") @db.Timestamptz(6)
+
+  company Company @relation(fields: [companyId], references: [id])
+
+  @@unique([companyId, code])
+  @@index([companyId])
+  @@index([status])
+  @@map("suppliers")
+}
+
