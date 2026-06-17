@@ -63,6 +63,11 @@ enum StockMovementSourceType {
   OPENING_BALANCE
 }
 
+enum PriceListType {
+  SALES
+  PURCHASE
+}
+
 model Company {
   id               String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   code             String       @unique @db.VarChar(50)
@@ -93,6 +98,7 @@ model Company {
   auditLogs         AuditLog[]
   customers         Customer[]
   suppliers         Supplier[]
+  priceLists        PriceList[]
 
   @@map("companies")
 }
@@ -187,6 +193,7 @@ model UnitOfMeasure {
   baseItems       InventoryItem[]      @relation("InventoryItemBaseUnit")
   conversionsFrom ItemUnitConversion[] @relation("ItemUnitConversionFromUnit")
   conversionsTo   ItemUnitConversion[] @relation("ItemUnitConversionToUnit")
+  priceListItems  PriceListItem[]
 
   @@unique([companyId, code])
   @@index([companyId])
@@ -219,6 +226,7 @@ model InventoryItem {
   conversions    ItemUnitConversion[]
   stockBalances  StockBalance[]
   stockMovements StockMovement[]
+  priceListItems  PriceListItem[]
 
   @@unique([companyId, sku])
   @@unique([companyId, barcode])
@@ -584,5 +592,48 @@ model Supplier {
   @@index([companyId])
   @@index([status])
   @@map("suppliers")
+}
+
+model PriceList {
+  id          String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  companyId   String       @map("company_id") @db.Uuid
+  code        String       @db.VarChar(50)
+  name        String       @db.VarChar(255)
+  description String?
+  type        PriceListType @default(SALES)
+  isDefault   Boolean      @default(false) @map("is_default")
+  status      RecordStatus @default(ACTIVE)
+  createdAt   DateTime     @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime     @updatedAt @map("updated_at") @db.Timestamptz(6)
+  deletedAt   DateTime?    @map("deleted_at") @db.Timestamptz(6)
+
+  company Company         @relation(fields: [companyId], references: [id])
+  items   PriceListItem[]
+
+  @@unique([companyId, code])
+  @@index([companyId])
+  @@index([status])
+  @@map("price_lists")
+}
+
+model PriceListItem {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  priceListId String   @map("price_list_id") @db.Uuid
+  itemId      String   @map("item_id") @db.Uuid
+  unitId      String   @map("unit_id") @db.Uuid
+  unitPrice   Decimal  @map("unit_price") @db.Decimal(19, 4)
+  minQuantity Decimal? @map("min_quantity") @db.Decimal(19, 4)
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  priceList PriceList       @relation(fields: [priceListId], references: [id])
+  item      InventoryItem   @relation(fields: [itemId], references: [id])
+  unit      UnitOfMeasure   @relation(fields: [unitId], references: [id])
+
+  @@unique([priceListId, itemId, unitId])
+  @@index([priceListId])
+  @@index([itemId])
+  @@index([unitId])
+  @@map("price_list_items")
 }
 
