@@ -8,6 +8,7 @@ import { BranchesModule } from './branches/branches.module.js'
 import { CustomersModule } from './customers/customers.module.js'
 import { PriceListsModule } from './price-lists/price-lists.module.js'
 import { SuppliersModule } from './suppliers/suppliers.module.js'
+import { TaxesModule } from './taxes/taxes.module.js'
 import { RequestLoggerMiddleware } from './common/http/request-logger.middleware.js'
 import { CompaniesModule } from './companies/companies.module.js'
 import { loadAppConfig } from './config/env.config.js'
@@ -34,6 +35,7 @@ import { WarehousesModule } from './warehouses/warehouses.module.js'
     CustomersModule,
     PriceListsModule,
     SuppliersModule,
+    TaxesModule,
     WarehousesModule,
     InventoryModule,
     DocumentSequencesModule,

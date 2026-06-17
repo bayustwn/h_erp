@@ -99,6 +99,7 @@ model Company {
   customers         Customer[]
   suppliers         Supplier[]
   priceLists        PriceList[]
+  taxes             Tax[]
 
   @@map("companies")
 }
@@ -635,5 +636,26 @@ model PriceListItem {
   @@index([itemId])
   @@index([unitId])
   @@map("price_list_items")
+}
+
+model Tax {
+  id          String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  companyId   String       @map("company_id") @db.Uuid
+  code        String       @db.VarChar(50)
+  name        String       @db.VarChar(255)
+  description String?
+  rate        Decimal      @db.Decimal(5, 2)
+  isDefault   Boolean      @default(false) @map("is_default")
+  status      RecordStatus @default(ACTIVE)
+  createdAt   DateTime     @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime     @updatedAt @map("updated_at") @db.Timestamptz(6)
+  deletedAt   DateTime?    @map("deleted_at") @db.Timestamptz(6)
+
+  company Company @relation(fields: [companyId], references: [id])
+
+  @@unique([companyId, code])
+  @@index([companyId])
+  @@index([status])
+  @@map("taxes")
 }
 
