@@ -6,6 +6,7 @@ import { AuditModule } from './audit/audit.module.js'
 import { AuthModule } from './auth/auth.module.js'
 import { BranchesModule } from './branches/branches.module.js'
 import { CustomersModule } from './customers/customers.module.js'
+import { PaymentTermsModule } from './payment-terms/payment-terms.module.js'
 import { PriceListsModule } from './price-lists/price-lists.module.js'
 import { SuppliersModule } from './suppliers/suppliers.module.js'
 import { TaxesModule } from './taxes/taxes.module.js'
@@ -33,6 +34,7 @@ import { WarehousesModule } from './warehouses/warehouses.module.js'
     CompaniesModule,
     BranchesModule,
     CustomersModule,
+    PaymentTermsModule,
     PriceListsModule,
     SuppliersModule,
     TaxesModule,

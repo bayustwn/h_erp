@@ -100,6 +100,7 @@ model Company {
   suppliers         Supplier[]
   priceLists        PriceList[]
   taxes             Tax[]
+  paymentTerms      PaymentTerm[]
 
   @@map("companies")
 }
@@ -657,5 +658,26 @@ model Tax {
   @@index([companyId])
   @@index([status])
   @@map("taxes")
+}
+
+model PaymentTerm {
+  id          String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  companyId   String       @map("company_id") @db.Uuid
+  code        String       @db.VarChar(50)
+  name        String       @db.VarChar(255)
+  description String?
+  daysDue     Int          @default(0) @map("days_due")
+  isDefault   Boolean      @default(false) @map("is_default")
+  status      RecordStatus @default(ACTIVE)
+  createdAt   DateTime     @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime     @updatedAt @map("updated_at") @db.Timestamptz(6)
+  deletedAt   DateTime?    @map("deleted_at") @db.Timestamptz(6)
+
+  company Company @relation(fields: [companyId], references: [id])
+
+  @@unique([companyId, code])
+  @@index([companyId])
+  @@index([status])
+  @@map("payment_terms")
 }
 
