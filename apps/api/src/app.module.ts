@@ -5,7 +5,10 @@ import { AttachmentsModule } from './attachments/attachments.module.js'
 import { AuditModule } from './audit/audit.module.js'
 import { AuthModule } from './auth/auth.module.js'
 import { BranchesModule } from './branches/branches.module.js'
+import { BankAccountsModule } from './bank-accounts/bank-accounts.module.js'
+import { ChartOfAccountsModule } from './chart-of-accounts/chart-of-accounts.module.js'
 import { CustomersModule } from './customers/customers.module.js'
+import { PaymentMethodsModule } from './payment-methods/payment-methods.module.js'
 import { PaymentTermsModule } from './payment-terms/payment-terms.module.js'
 import { PriceListsModule } from './price-lists/price-lists.module.js'
 import { SuppliersModule } from './suppliers/suppliers.module.js'
@@ -33,7 +36,10 @@ import { WarehousesModule } from './warehouses/warehouses.module.js'
     AccessControlModule,
     CompaniesModule,
     BranchesModule,
+    BankAccountsModule,
+    ChartOfAccountsModule,
     CustomersModule,
+    PaymentMethodsModule,
     PaymentTermsModule,
     PriceListsModule,
     SuppliersModule,

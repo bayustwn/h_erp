@@ -101,6 +101,9 @@ model Company {
   priceLists        PriceList[]
   taxes             Tax[]
   paymentTerms      PaymentTerm[]
+  paymentMethods    PaymentMethod[]
+  bankAccounts      BankAccount[]
+  chartOfAccounts   ChartOfAccount[]
 
   @@map("companies")
 }
@@ -679,5 +682,83 @@ model PaymentTerm {
   @@index([companyId])
   @@index([status])
   @@map("payment_terms")
+}
+
+model PaymentMethod {
+  id          String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  companyId   String       @map("company_id") @db.Uuid
+  code        String       @db.VarChar(50)
+  name        String       @db.VarChar(255)
+  description String?
+  isDefault   Boolean      @default(false) @map("is_default")
+  status      RecordStatus @default(ACTIVE)
+  createdAt   DateTime     @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime     @updatedAt @map("updated_at") @db.Timestamptz(6)
+  deletedAt   DateTime?    @map("deleted_at") @db.Timestamptz(6)
+
+  company Company @relation(fields: [companyId], references: [id])
+
+  @@unique([companyId, code])
+  @@index([companyId])
+  @@index([status])
+  @@map("payment_methods")
+}
+
+model BankAccount {
+  id          String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  companyId   String       @map("company_id") @db.Uuid
+  code        String       @db.VarChar(50)
+  name        String       @db.VarChar(255)
+  bankName    String       @map("bank_name") @db.VarChar(255)
+  accountNumber String     @map("account_number") @db.VarChar(100)
+  accountName String       @map("account_name") @db.VarChar(255)
+  currency    String       @default("IDR") @db.Char(3)
+  description String?
+  isDefault   Boolean      @default(false) @map("is_default")
+  status      RecordStatus @default(ACTIVE)
+  createdAt   DateTime     @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime     @updatedAt @map("updated_at") @db.Timestamptz(6)
+  deletedAt   DateTime?    @map("deleted_at") @db.Timestamptz(6)
+
+  company Company @relation(fields: [companyId], references: [id])
+
+  @@unique([companyId, code])
+  @@index([companyId])
+  @@index([status])
+  @@map("bank_accounts")
+}
+
+model ChartOfAccount {
+  id          String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  companyId   String       @map("company_id") @db.Uuid
+  parentId    String?      @map("parent_id") @db.Uuid
+  code        String       @db.VarChar(50)
+  name        String       @db.VarChar(255)
+  description String?
+  type        AccountType  @default(ASSET)
+  isDefault   Boolean      @default(false) @map("is_default")
+  status      RecordStatus @default(ACTIVE)
+  createdAt   DateTime     @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime     @updatedAt @map("updated_at") @db.Timestamptz(6)
+  deletedAt   DateTime?    @map("deleted_at") @db.Timestamptz(6)
+
+  company  Company          @relation(fields: [companyId], references: [id])
+  parent   ChartOfAccount?  @relation("ChartOfAccountHierarchy", fields: [parentId], references: [id])
+  children ChartOfAccount[] @relation("ChartOfAccountHierarchy")
+
+  @@unique([companyId, code])
+  @@index([companyId])
+  @@index([parentId])
+  @@index([type])
+  @@index([status])
+  @@map("chart_of_accounts")
+}
+
+enum AccountType {
+  ASSET
+  LIABILITY
+  EQUITY
+  REVENUE
+  EXPENSE
 }
 
