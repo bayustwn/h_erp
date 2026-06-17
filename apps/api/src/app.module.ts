@@ -5,6 +5,7 @@ import { AttachmentsModule } from './attachments/attachments.module.js'
 import { AuditModule } from './audit/audit.module.js'
 import { AuthModule } from './auth/auth.module.js'
 import { BranchesModule } from './branches/branches.module.js'
+import { CustomersModule } from './customers/customers.module.js'
 import { RequestLoggerMiddleware } from './common/http/request-logger.middleware.js'
 import { CompaniesModule } from './companies/companies.module.js'
 import { loadAppConfig } from './config/env.config.js'
@@ -28,6 +29,7 @@ import { WarehousesModule } from './warehouses/warehouses.module.js'
     AccessControlModule,
     CompaniesModule,
     BranchesModule,
+    CustomersModule,
     WarehousesModule,
     InventoryModule,
     DocumentSequencesModule,
