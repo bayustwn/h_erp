@@ -2,6 +2,7 @@ import { Inject, Injectable, NotFoundException } from '@nestjs/common'
 import { createPaginationMeta, getPaginationSkipTake } from '../common/pagination/pagination.js'
 import type { Prisma } from '../generated/prisma/client.js'
 import { AuditService } from '../audit/audit.service.js'
+import { IntegrationService } from '../integration/integration.service.js'
 import { PrismaService } from '../prisma/prisma.service.js'
 import type { TenantContext } from '../access-control/access-control.types.js'
 import type { CreateSalesReturnInput, SalesReturnQuery, UpdateSalesReturnStatusInput } from './sales-returns.schemas.js'
@@ -11,6 +12,7 @@ export class SalesReturnsService {
   constructor(
     @Inject(PrismaService) private readonly prisma: PrismaService,
     @Inject(AuditService) private readonly auditService: AuditService,
+    @Inject(IntegrationService) private readonly integration: IntegrationService,
   ) {}
 
   async list(query: SalesReturnQuery, tenant: TenantContext) {
@@ -51,6 +53,7 @@ export class SalesReturnsService {
   }
 
   async create(input: CreateSalesReturnInput, tenant: TenantContext, actorUserId: string) {
+    const docNumber = input.documentNumber || (await this.integration.generateDocNumber(tenant, 'SALES_RETURN', input.branchId)) || 'SR-TEMP'
     return this.prisma.$transaction(async (tx) => {
       const ret = await tx.salesReturn.create({
         data: {
@@ -58,7 +61,8 @@ export class SalesReturnsService {
           branchId: input.branchId,
           customerId: input.customerId,
           salesInvoiceId: input.salesInvoiceId,
-          documentNumber: input.documentNumber,
+          warehouseId: input.warehouseId,
+          documentNumber: docNumber,
           returnDate: input.returnDate ? new Date(input.returnDate) : new Date(),
           totalAmount: input.totalAmount,
           notes: input.notes,
@@ -97,7 +101,52 @@ export class SalesReturnsService {
       } else {
         await this.auditService.recordUpdate(auditInput, tx)
       }
+      if (input.status === 'COMPLETED') {
+        if (updated.warehouseId && updated.items) {
+          for (const item of updated.items) {
+            await this.integration.createStockMovement(tx, {
+              companyId: tenant.companyId,
+              warehouseId: updated.warehouseId,
+              itemId: item.itemId,
+              movementType: 'RETURN_IN',
+              sourceType: 'SALES_DELIVERY',
+              sourceId: returnId,
+              quantity: Number(item.quantity),
+              actorUserId,
+            })
+          }
+        }
+        await this.postReturnJournal(tx, updated, tenant)
+      }
       return updated
+    })
+  }
+
+  private async postReturnJournal(
+    tx: Prisma.TransactionClient,
+    ret: Awaited<ReturnType<SalesReturnsService['getById']>>,
+    tenant: TenantContext,
+  ) {
+    const arAccount = await this.integration.findArAccount(tx, tenant.companyId)
+    if (!arAccount) return
+    const lines: Array<{ accountId: string; debit: number; credit: number; description?: string }> = [
+      { accountId: arAccount.id, debit: 0, credit: Number(ret.totalAmount), description: 'Sales return (credit note)' },
+    ]
+    for (const item of ret.items) {
+      const revenueAccountId = await this.integration.findRevenueAccount(tx, tenant.companyId, item.itemId)
+      if (revenueAccountId) {
+        lines.push({ accountId: revenueAccountId, debit: Number(item.totalPrice), credit: 0, description: item.item?.name ?? '' })
+      }
+    }
+    await this.integration.createJournalEntry(tx, {
+      companyId: tenant.companyId,
+      branchId: ret.branchId ?? undefined,
+      documentNumber: `JE-${ret.documentNumber}`,
+      entryDate: new Date(),
+      description: `Sales return ${ret.documentNumber}`,
+      referenceType: 'SALES_RETURN',
+      referenceId: ret.id,
+      lines,
     })
   }
 
@@ -108,6 +157,7 @@ export class SalesReturnsService {
       branchId: true,
       customerId: true,
       salesInvoiceId: true,
+      warehouseId: true,
       documentNumber: true,
       returnDate: true,
       status: true,

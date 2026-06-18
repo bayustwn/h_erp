@@ -181,6 +181,8 @@ model Warehouse {
   stockMovements StockMovement[]
   deliveryOrders DeliveryOrder[]
   goodsReceipts  GoodsReceipt[]
+  salesReturns   SalesReturn[]
+  purchaseReturns PurchaseReturn[]
 
   @@unique([companyId, code])
   @@index([companyId])
@@ -1338,6 +1340,7 @@ model SalesReturn {
   branchId        String?        @map("branch_id") @db.Uuid
   customerId      String         @map("customer_id") @db.Uuid
   salesInvoiceId  String?        @map("sales_invoice_id") @db.Uuid
+  warehouseId     String?        @map("warehouse_id") @db.Uuid
   documentNumber  String         @map("document_number") @db.VarChar(50)
   returnDate      DateTime       @default(now()) @map("return_date") @db.Date
   status          DocumentStatus @default(DRAFT)
@@ -1351,12 +1354,14 @@ model SalesReturn {
   branch        Branch?           @relation(fields: [branchId], references: [id])
   customer      Customer          @relation(fields: [customerId], references: [id])
   salesInvoice  SalesInvoice?     @relation(fields: [salesInvoiceId], references: [id])
+  warehouse     Warehouse?        @relation(fields: [warehouseId], references: [id])
   items         SalesReturnItem[]
 
   @@index([companyId])
   @@index([branchId])
   @@index([customerId])
   @@index([salesInvoiceId])
+  @@index([warehouseId])
   @@index([documentNumber])
   @@index([status])
   @@map("sales_returns")
@@ -1389,6 +1394,7 @@ model PurchaseReturn {
   branchId          String?        @map("branch_id") @db.Uuid
   supplierId        String         @map("supplier_id") @db.Uuid
   purchaseInvoiceId String?        @map("purchase_invoice_id") @db.Uuid
+  warehouseId       String?        @map("warehouse_id") @db.Uuid
   documentNumber    String         @map("document_number") @db.VarChar(50)
   returnDate        DateTime       @default(now()) @map("return_date") @db.Date
   status            DocumentStatus @default(DRAFT)
@@ -1402,12 +1408,14 @@ model PurchaseReturn {
   branch          Branch?             @relation(fields: [branchId], references: [id])
   supplier        Supplier            @relation(fields: [supplierId], references: [id])
   purchaseInvoice PurchaseInvoice?    @relation(fields: [purchaseInvoiceId], references: [id])
+  warehouse       Warehouse?          @relation(fields: [warehouseId], references: [id])
   items           PurchaseReturnItem[]
 
   @@index([companyId])
   @@index([branchId])
   @@index([supplierId])
   @@index([purchaseInvoiceId])
+  @@index([warehouseId])
   @@index([documentNumber])
   @@index([status])
   @@map("purchase_returns")

@@ -2,6 +2,7 @@ import { Inject, Injectable, NotFoundException } from '@nestjs/common'
 import { createPaginationMeta, getPaginationSkipTake } from '../common/pagination/pagination.js'
 import type { Prisma } from '../generated/prisma/client.js'
 import { AuditService } from '../audit/audit.service.js'
+import { IntegrationService } from '../integration/integration.service.js'
 import { PrismaService } from '../prisma/prisma.service.js'
 import type { TenantContext } from '../access-control/access-control.types.js'
 import type { CreatePurchaseReturnInput, PurchaseReturnQuery, UpdatePurchaseReturnStatusInput } from './purchase-returns.schemas.js'
@@ -11,6 +12,7 @@ export class PurchaseReturnsService {
   constructor(
     @Inject(PrismaService) private readonly prisma: PrismaService,
     @Inject(AuditService) private readonly auditService: AuditService,
+    @Inject(IntegrationService) private readonly integration: IntegrationService,
   ) {}
 
   async list(query: PurchaseReturnQuery, tenant: TenantContext) {
@@ -51,6 +53,7 @@ export class PurchaseReturnsService {
   }
 
   async create(input: CreatePurchaseReturnInput, tenant: TenantContext, actorUserId: string) {
+    const docNumber = input.documentNumber || (await this.integration.generateDocNumber(tenant, 'PURCHASE_RETURN', input.branchId)) || 'PR-TEMP'
     return this.prisma.$transaction(async (tx) => {
       const ret = await tx.purchaseReturn.create({
         data: {
@@ -58,7 +61,8 @@ export class PurchaseReturnsService {
           branchId: input.branchId,
           supplierId: input.supplierId,
           purchaseInvoiceId: input.purchaseInvoiceId,
-          documentNumber: input.documentNumber,
+          warehouseId: input.warehouseId,
+          documentNumber: docNumber,
           returnDate: input.returnDate ? new Date(input.returnDate) : new Date(),
           totalAmount: input.totalAmount,
           notes: input.notes,
@@ -97,7 +101,52 @@ export class PurchaseReturnsService {
       } else {
         await this.auditService.recordUpdate(auditInput, tx)
       }
+      if (input.status === 'COMPLETED') {
+        if (updated.warehouseId && updated.items) {
+          for (const item of updated.items) {
+            await this.integration.createStockMovement(tx, {
+              companyId: tenant.companyId,
+              warehouseId: updated.warehouseId,
+              itemId: item.itemId,
+              movementType: 'RETURN_OUT',
+              sourceType: 'PURCHASE_RECEIPT',
+              sourceId: returnId,
+              quantity: Number(item.quantity),
+              actorUserId,
+            })
+          }
+        }
+        await this.postReturnJournal(tx, updated, tenant)
+      }
       return updated
+    })
+  }
+
+  private async postReturnJournal(
+    tx: Prisma.TransactionClient,
+    ret: Awaited<ReturnType<PurchaseReturnsService['getById']>>,
+    tenant: TenantContext,
+  ) {
+    const apAccount = await this.integration.findApAccount(tx, tenant.companyId)
+    if (!apAccount) return
+    const lines: Array<{ accountId: string; debit: number; credit: number; description?: string }> = [
+      { accountId: apAccount.id, debit: Number(ret.totalAmount), credit: 0, description: 'Purchase return (debit note)' },
+    ]
+    for (const item of ret.items) {
+      const purchaseAccountId = await this.integration.findPurchaseAccount(tx, tenant.companyId, item.itemId)
+      if (purchaseAccountId) {
+        lines.push({ accountId: purchaseAccountId, debit: 0, credit: Number(item.totalPrice), description: item.item?.name ?? '' })
+      }
+    }
+    await this.integration.createJournalEntry(tx, {
+      companyId: tenant.companyId,
+      branchId: ret.branchId ?? undefined,
+      documentNumber: `JE-${ret.documentNumber}`,
+      entryDate: new Date(),
+      description: `Purchase return ${ret.documentNumber}`,
+      referenceType: 'PURCHASE_RETURN',
+      referenceId: ret.id,
+      lines,
     })
   }
 
@@ -108,6 +157,7 @@ export class PurchaseReturnsService {
       branchId: true,
       supplierId: true,
       purchaseInvoiceId: true,
+      warehouseId: true,
       documentNumber: true,
       returnDate: true,
       status: true,
