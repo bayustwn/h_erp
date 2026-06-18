@@ -113,6 +113,8 @@ model Company {
   purchaseInvoices          PurchaseInvoice[]
   customerPayments          CustomerPayment[]
   supplierPayments          SupplierPayment[]
+  salesReturns              SalesReturn[]
+  purchaseReturns           PurchaseReturn[]
 
   @@map("companies")
 }
@@ -144,6 +146,8 @@ model Branch {
   purchaseInvoices  PurchaseInvoice[]
   customerPayments  CustomerPayment[]
   supplierPayments  SupplierPayment[]
+  salesReturns      SalesReturn[]
+  purchaseReturns   PurchaseReturn[]
 
   @@unique([companyId, code])
   @@index([companyId])
@@ -223,8 +227,10 @@ model UnitOfMeasure {
   priceListItems       PriceListItem[]
   deliveryOrderItems    DeliveryOrderItem[]
   goodsReceiptItems     GoodsReceiptItem[]
-  salesInvoiceItems     SalesInvoiceItem[]
-  purchaseInvoiceItems  PurchaseInvoiceItem[]
+  salesInvoiceItems    SalesInvoiceItem[]
+  purchaseInvoiceItems PurchaseInvoiceItem[]
+  salesReturnItems     SalesReturnItem[]
+  purchaseReturnItems  PurchaseReturnItem[]
 
   @@unique([companyId, code])
   @@index([companyId])
@@ -265,6 +271,8 @@ model InventoryItem {
   goodsReceiptItems    GoodsReceiptItem[]
   salesInvoiceItems    SalesInvoiceItem[]
   purchaseInvoiceItems PurchaseInvoiceItem[]
+  salesReturnItems     SalesReturnItem[]
+  purchaseReturnItems  PurchaseReturnItem[]
 
   @@unique([companyId, sku])
   @@unique([companyId, barcode])
@@ -605,6 +613,7 @@ model Customer {
   deliveryOrders DeliveryOrder[]
   salesInvoices  SalesInvoice[]
   customerPayments CustomerPayment[]
+  salesReturns      SalesReturn[]
 
   @@unique([companyId, code])
   @@index([companyId])
@@ -633,6 +642,7 @@ model Supplier {
   goodsReceipts    GoodsReceipt[]
   purchaseInvoices PurchaseInvoice[]
   supplierPayments SupplierPayment[]
+  purchaseReturns  PurchaseReturn[]
 
   @@unique([companyId, code])
   @@index([companyId])
@@ -1113,6 +1123,7 @@ model SalesInvoice {
   salesOrder SalesOrder?        @relation(fields: [salesOrderId], references: [id])
   items              SalesInvoiceItem[]
   paymentAllocations CustomerPaymentAllocation[]
+  salesReturns       SalesReturn[]
 
   @@index([companyId])
   @@index([branchId])
@@ -1175,6 +1186,7 @@ model PurchaseInvoice {
   purchaseOrder PurchaseOrder?      @relation(fields: [purchaseOrderId], references: [id])
   items              PurchaseInvoiceItem[]
   paymentAllocations SupplierPaymentAllocation[]
+  purchaseReturns    PurchaseReturn[]
 
   @@index([companyId])
   @@index([branchId])
@@ -1307,5 +1319,107 @@ model SupplierPaymentAllocation {
   @@index([supplierPaymentId])
   @@index([purchaseInvoiceId])
   @@map("supplier_payment_allocations")
+}
+
+model SalesReturn {
+  id              String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  companyId       String         @map("company_id") @db.Uuid
+  branchId        String?        @map("branch_id") @db.Uuid
+  customerId      String         @map("customer_id") @db.Uuid
+  salesInvoiceId  String?        @map("sales_invoice_id") @db.Uuid
+  documentNumber  String         @map("document_number") @db.VarChar(50)
+  returnDate      DateTime       @default(now()) @map("return_date") @db.Date
+  status          DocumentStatus @default(DRAFT)
+  totalAmount     Decimal        @default(0) @map("total_amount") @db.Decimal(19, 4)
+  notes           String?
+  createdAt       DateTime       @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt       DateTime       @updatedAt @map("updated_at") @db.Timestamptz(6)
+  deletedAt       DateTime?      @map("deleted_at") @db.Timestamptz(6)
+
+  company       Company           @relation(fields: [companyId], references: [id])
+  branch        Branch?           @relation(fields: [branchId], references: [id])
+  customer      Customer          @relation(fields: [customerId], references: [id])
+  salesInvoice  SalesInvoice?     @relation(fields: [salesInvoiceId], references: [id])
+  items         SalesReturnItem[]
+
+  @@index([companyId])
+  @@index([branchId])
+  @@index([customerId])
+  @@index([salesInvoiceId])
+  @@index([documentNumber])
+  @@index([status])
+  @@map("sales_returns")
+}
+
+model SalesReturnItem {
+  id             String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  salesReturnId  String   @map("sales_return_id") @db.Uuid
+  itemId         String   @map("item_id") @db.Uuid
+  unitId         String   @map("unit_id") @db.Uuid
+  quantity       Decimal  @db.Decimal(19, 4)
+  unitPrice      Decimal  @map("unit_price") @db.Decimal(19, 4)
+  totalPrice     Decimal  @map("total_price") @db.Decimal(19, 4)
+  notes          String?
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt      DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  salesReturn SalesReturn   @relation(fields: [salesReturnId], references: [id])
+  item        InventoryItem @relation(fields: [itemId], references: [id])
+  unit        UnitOfMeasure @relation(fields: [unitId], references: [id])
+
+  @@index([salesReturnId])
+  @@index([itemId])
+  @@map("sales_return_items")
+}
+
+model PurchaseReturn {
+  id                String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  companyId         String         @map("company_id") @db.Uuid
+  branchId          String?        @map("branch_id") @db.Uuid
+  supplierId        String         @map("supplier_id") @db.Uuid
+  purchaseInvoiceId String?        @map("purchase_invoice_id") @db.Uuid
+  documentNumber    String         @map("document_number") @db.VarChar(50)
+  returnDate        DateTime       @default(now()) @map("return_date") @db.Date
+  status            DocumentStatus @default(DRAFT)
+  totalAmount       Decimal        @default(0) @map("total_amount") @db.Decimal(19, 4)
+  notes             String?
+  createdAt         DateTime       @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt         DateTime       @updatedAt @map("updated_at") @db.Timestamptz(6)
+  deletedAt         DateTime?      @map("deleted_at") @db.Timestamptz(6)
+
+  company         Company             @relation(fields: [companyId], references: [id])
+  branch          Branch?             @relation(fields: [branchId], references: [id])
+  supplier        Supplier            @relation(fields: [supplierId], references: [id])
+  purchaseInvoice PurchaseInvoice?    @relation(fields: [purchaseInvoiceId], references: [id])
+  items           PurchaseReturnItem[]
+
+  @@index([companyId])
+  @@index([branchId])
+  @@index([supplierId])
+  @@index([purchaseInvoiceId])
+  @@index([documentNumber])
+  @@index([status])
+  @@map("purchase_returns")
+}
+
+model PurchaseReturnItem {
+  id               String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  purchaseReturnId String   @map("purchase_return_id") @db.Uuid
+  itemId           String   @map("item_id") @db.Uuid
+  unitId           String   @map("unit_id") @db.Uuid
+  quantity         Decimal  @db.Decimal(19, 4)
+  unitPrice        Decimal  @map("unit_price") @db.Decimal(19, 4)
+  totalPrice       Decimal  @map("total_price") @db.Decimal(19, 4)
+  notes            String?
+  createdAt        DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt        DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  purchaseReturn PurchaseReturn @relation(fields: [purchaseReturnId], references: [id])
+  item           InventoryItem  @relation(fields: [itemId], references: [id])
+  unit           UnitOfMeasure  @relation(fields: [unitId], references: [id])
+
+  @@index([purchaseReturnId])
+  @@index([itemId])
+  @@map("purchase_return_items")
 }
 
