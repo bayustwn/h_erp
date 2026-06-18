@@ -18,6 +18,7 @@ import { RequestLoggerMiddleware } from './common/http/request-logger.middleware
 import { CompaniesModule } from './companies/companies.module.js'
 import { loadAppConfig } from './config/env.config.js'
 import { DocumentSequencesModule } from './document-sequences/document-sequences.module.js'
+import { ExcelModule } from './excel/excel.module.js'
 import { HealthModule } from './health/health.module.js'
 import { InventoryModule } from './inventory/inventory.module.js'
 import { PrismaModule } from './prisma/prisma.module.js'
@@ -49,6 +50,7 @@ import { WarehousesModule } from './warehouses/warehouses.module.js'
     WarehousesModule,
     InventoryModule,
     DocumentSequencesModule,
+    ExcelModule,
     AttachmentsModule,
     UsersModule,
     HealthModule,
