@@ -15,11 +15,18 @@
     "noEmit": true,
     "jsx": "react-jsx",
 
+    /* Type Safety */
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+
     /* Linting */
     "noUnusedLocals": true,
     "noUnusedParameters": true,
     "erasableSyntaxOnly": true,
-    "noFallthroughCasesInSwitch": true
+    "noFallthroughCasesInSwitch": true,
+    "paths": {
+      "@/*": ["./src/*"]
+    }
   },
   "include": ["src"]
 }
