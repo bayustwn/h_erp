@@ -8,6 +8,7 @@ import {
   UseGuards,
   UsePipes,
 } from '@nestjs/common'
+import { ApiTags } from '@nestjs/swagger'
 import { ZodValidationPipe } from '../common/validation/zod-validation.pipe.js'
 import { AuthService } from './auth.service.js'
 import { AuthGuard, type AuthenticatedRequest } from './auth.guard.js'
@@ -27,6 +28,7 @@ type RequestWithMetadata = AuthenticatedRequest & {
   }
 }
 
+@ApiTags('Authentication')
 @Controller('auth')
 export class AuthController {
   constructor(@Inject(AuthService) private readonly authService: AuthService) {}

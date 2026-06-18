@@ -1,4 +1,5 @@
 import { Body, Controller, Get, Inject, Post, Query, UseGuards } from '@nestjs/common'
+import { ApiTags } from '@nestjs/swagger'
 import { PermissionGuard } from '../access-control/permission.guard.js'
 import { RequirePermissions } from '../access-control/permissions.decorator.js'
 import { CurrentTenant, RequireTenant } from '../access-control/tenant.decorator.js'
@@ -20,6 +21,7 @@ import {
 } from './inventory-stock.schemas.js'
 import { InventoryStockService } from './inventory-stock.service.js'
 
+@ApiTags('Inventory Stock')
 @Controller('inventory')
 @UseGuards(AuthGuard, TenantGuard, PermissionGuard)
 @RequireTenant()

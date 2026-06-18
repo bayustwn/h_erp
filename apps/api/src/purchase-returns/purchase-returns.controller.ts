@@ -2,6 +2,7 @@ import {
   Body, Controller, Get, Inject, Param, Patch, Post, Query, UseGuards,
 } from '@nestjs/common'
 import { ParseUUIDPipe } from '@nestjs/common'
+import { ApiTags } from '@nestjs/swagger'
 import { PermissionGuard } from '../access-control/permission.guard.js'
 import { RequirePermissions } from '../access-control/permissions.decorator.js'
 import { CurrentTenant, RequireTenant } from '../access-control/tenant.decorator.js'
@@ -17,6 +18,7 @@ import {
 } from './purchase-returns.schemas.js'
 import { PurchaseReturnsService } from './purchase-returns.service.js'
 
+@ApiTags('Purchase Returns')
 @Controller('purchase-returns')
 @UseGuards(AuthGuard, TenantGuard, PermissionGuard)
 @RequireTenant()

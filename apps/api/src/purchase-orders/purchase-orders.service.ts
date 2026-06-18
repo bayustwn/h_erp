@@ -2,6 +2,7 @@ import { Inject, Injectable, NotFoundException } from '@nestjs/common'
 import { createPaginationMeta, getPaginationSkipTake } from '../common/pagination/pagination.js'
 import type { Prisma } from '../generated/prisma/client.js'
 import { AuditService } from '../audit/audit.service.js'
+import { IntegrationService } from '../integration/integration.service.js'
 import { PrismaService } from '../prisma/prisma.service.js'
 import type { TenantContext } from '../access-control/access-control.types.js'
 import type { CreatePurchaseOrderInput, PurchaseOrderQuery, UpdatePurchaseOrderInput, UpdatePurchaseOrderStatusInput } from './purchase-orders.schemas.js'
@@ -11,6 +12,7 @@ export class PurchaseOrdersService {
   constructor(
     @Inject(PrismaService) private readonly prisma: PrismaService,
     @Inject(AuditService) private readonly auditService: AuditService,
+    @Inject(IntegrationService) private readonly integration: IntegrationService,
   ) {}
 
   async list(query: PurchaseOrderQuery, tenant: TenantContext) {
@@ -59,13 +61,14 @@ export class PurchaseOrdersService {
   }
 
   async create(input: CreatePurchaseOrderInput, tenant: TenantContext, actorUserId: string) {
+    const docNumber = input.documentNumber || (await this.integration.generateDocNumber(tenant, 'PURCHASE_ORDER', input.branchId)) || 'PO-TEMP'
     return this.prisma.$transaction(async (tx) => {
       const order = await tx.purchaseOrder.create({
         data: {
           companyId: tenant.companyId,
           branchId: input.branchId,
           supplierId: input.supplierId,
-          documentNumber: input.documentNumber,
+          documentNumber: docNumber,
           referenceNumber: input.referenceNumber,
           orderDate: input.orderDate ? new Date(input.orderDate) : new Date(),
           expectedDate: input.expectedDate ? new Date(input.expectedDate) : undefined,

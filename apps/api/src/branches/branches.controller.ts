@@ -10,6 +10,7 @@ import {
   UseGuards,
 } from '@nestjs/common'
 import { ParseUUIDPipe } from '@nestjs/common'
+import { ApiTags } from '@nestjs/swagger'
 import { PermissionGuard } from '../access-control/permission.guard.js'
 import { RequirePermissions } from '../access-control/permissions.decorator.js'
 import { CurrentTenant, RequireTenant } from '../access-control/tenant.decorator.js'
@@ -31,6 +32,7 @@ import {
 } from './branches.schemas.js'
 import { BranchesService } from './branches.service.js'
 
+@ApiTags('Branches')
 @Controller('branches')
 @UseGuards(AuthGuard, TenantGuard, PermissionGuard)
 @RequireTenant()

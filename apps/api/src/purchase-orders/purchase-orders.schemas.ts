@@ -33,7 +33,7 @@ export const purchaseOrderItemSchema = z.object({
 export const createPurchaseOrderSchema = z.object({
   supplierId: z.string().uuid(),
   branchId: z.string().uuid().optional(),
-  documentNumber: z.string().trim().min(1).max(50),
+  documentNumber: z.string().trim().min(1).max(50).optional(),
   referenceNumber: optionalString,
   orderDate: z.string().optional(),
   expectedDate: z.string().optional(),

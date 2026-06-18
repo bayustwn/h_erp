@@ -127,12 +127,12 @@ export class IntegrationService {
 
   async findRevenueAccount(tx: Prisma.TransactionClient, companyId: string, itemId: string) {
     const mapping = await tx.productAccountingMapping.findFirst({
-      where: { companyId, itemId, deletedAt: null },
+      where: { companyId, itemId },
       select: { revenueAccountId: true },
     })
     if (mapping?.revenueAccountId) return mapping.revenueAccountId
     const defaultMapping = await tx.productAccountingMapping.findFirst({
-      where: { companyId, itemCategoryId: null, itemId: null, deletedAt: null },
+      where: { companyId, itemCategoryId: null, itemId: null },
       select: { revenueAccountId: true },
     })
     return defaultMapping?.revenueAccountId ?? null
@@ -140,12 +140,12 @@ export class IntegrationService {
 
   async findCogsAccount(tx: Prisma.TransactionClient, companyId: string, itemId: string) {
     const mapping = await tx.productAccountingMapping.findFirst({
-      where: { companyId, itemId, deletedAt: null },
+      where: { companyId, itemId },
       select: { cogsAccountId: true },
     })
     if (mapping?.cogsAccountId) return mapping.cogsAccountId
     const defaultMapping = await tx.productAccountingMapping.findFirst({
-      where: { companyId, itemCategoryId: null, itemId: null, deletedAt: null },
+      where: { companyId, itemCategoryId: null, itemId: null },
       select: { cogsAccountId: true },
     })
     return defaultMapping?.cogsAccountId ?? null
@@ -153,12 +153,12 @@ export class IntegrationService {
 
   async findInventoryAccount(tx: Prisma.TransactionClient, companyId: string, itemId: string) {
     const mapping = await tx.productAccountingMapping.findFirst({
-      where: { companyId, itemId, deletedAt: null },
+      where: { companyId, itemId },
       select: { inventoryAccountId: true },
     })
     if (mapping?.inventoryAccountId) return mapping.inventoryAccountId
     const defaultMapping = await tx.productAccountingMapping.findFirst({
-      where: { companyId, itemCategoryId: null, itemId: null, deletedAt: null },
+      where: { companyId, itemCategoryId: null, itemId: null },
       select: { inventoryAccountId: true },
     })
     return defaultMapping?.inventoryAccountId ?? null
@@ -166,12 +166,12 @@ export class IntegrationService {
 
   async findPurchaseAccount(tx: Prisma.TransactionClient, companyId: string, itemId: string) {
     const mapping = await tx.productAccountingMapping.findFirst({
-      where: { companyId, itemId, deletedAt: null },
+      where: { companyId, itemId },
       select: { purchaseAccountId: true },
     })
     if (mapping?.purchaseAccountId) return mapping.purchaseAccountId
     const defaultMapping = await tx.productAccountingMapping.findFirst({
-      where: { companyId, itemCategoryId: null, itemId: null, deletedAt: null },
+      where: { companyId, itemCategoryId: null, itemId: null },
       select: { purchaseAccountId: true },
     })
     return defaultMapping?.purchaseAccountId ?? null
@@ -184,7 +184,7 @@ export class IntegrationService {
     itemId: string,
   ): Promise<number> {
     const balance = await tx.stockBalance.findFirst({
-      where: { companyId, warehouseId, itemId, deletedAt: null },
+      where: { companyId, warehouseId, itemId },
       select: { quantity: true },
     })
     return balance ? Number(balance.quantity) : 0

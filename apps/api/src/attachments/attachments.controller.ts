@@ -14,6 +14,7 @@ import {
 } from '@nestjs/common'
 import { FileInterceptor } from '@nestjs/platform-express'
 import type { TenantContext } from '../access-control/access-control.types.js'
+import { ApiTags } from '@nestjs/swagger'
 import { PermissionGuard } from '../access-control/permission.guard.js'
 import { RequirePermissions } from '../access-control/permissions.decorator.js'
 import { CurrentTenant, RequireTenant } from '../access-control/tenant.decorator.js'
@@ -35,6 +36,7 @@ import {
   type MulterUploadedFile,
 } from './attachments.service.js'
 
+@ApiTags('Attachments')
 @Controller('attachments')
 @UseGuards(AuthGuard, TenantGuard, PermissionGuard)
 @RequireTenant()

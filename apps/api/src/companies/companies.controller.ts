@@ -1,4 +1,5 @@
 import { Body, Controller, Get, Inject, Patch, Query, UseGuards } from '@nestjs/common'
+import { ApiTags } from '@nestjs/swagger'
 import { PermissionGuard } from '../access-control/permission.guard.js'
 import { RequirePermissions } from '../access-control/permissions.decorator.js'
 import { CurrentTenant, RequireTenant } from '../access-control/tenant.decorator.js'
@@ -16,6 +17,7 @@ import {
 } from './companies.schemas.js'
 import { CompaniesService } from './companies.service.js'
 
+@ApiTags('Companies')
 @Controller('companies')
 export class CompaniesController {
   constructor(

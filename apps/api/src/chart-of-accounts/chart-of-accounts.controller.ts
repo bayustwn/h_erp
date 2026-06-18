@@ -1,5 +1,6 @@
 import { Body, Controller, Get, Inject, Param, Patch, Post, Query, UseGuards } from '@nestjs/common'
 import { ParseUUIDPipe } from '@nestjs/common'
+import { ApiTags } from '@nestjs/swagger'
 import { PermissionGuard } from '../access-control/permission.guard.js'
 import { RequirePermissions } from '../access-control/permissions.decorator.js'
 import { CurrentTenant, RequireTenant } from '../access-control/tenant.decorator.js'
@@ -10,6 +11,7 @@ import { ZodValidationPipe } from '../common/validation/zod-validation.pipe.js'
 import { chartOfAccountsQuerySchema, createChartOfAccountSchema, updateChartOfAccountSchema, updateChartOfAccountStatusSchema, type ChartOfAccountsQuery, type CreateChartOfAccountInput, type UpdateChartOfAccountInput, type UpdateChartOfAccountStatusInput } from './chart-of-accounts.schemas.js'
 import { ChartOfAccountsService } from './chart-of-accounts.service.js'
 
+@ApiTags('Chart of Accounts')
 @Controller('chart-of-accounts')
 @UseGuards(AuthGuard, TenantGuard, PermissionGuard)
 @RequireTenant()

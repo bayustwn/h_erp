@@ -2,6 +2,7 @@ import {
   Body, Controller, Get, Inject, Param, Patch, Post, Query, UseGuards,
 } from '@nestjs/common'
 import { ParseUUIDPipe } from '@nestjs/common'
+import { ApiTags } from '@nestjs/swagger'
 import { PermissionGuard } from '../access-control/permission.guard.js'
 import { RequirePermissions } from '../access-control/permissions.decorator.js'
 import { CurrentTenant, RequireTenant } from '../access-control/tenant.decorator.js'
@@ -15,6 +16,7 @@ import {
 } from './payment-terms.schemas.js'
 import { PaymentTermsService } from './payment-terms.service.js'
 
+@ApiTags('Payment Terms')
 @Controller('payment-terms')
 @UseGuards(AuthGuard, TenantGuard, PermissionGuard)
 @RequireTenant()

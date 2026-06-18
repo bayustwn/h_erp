@@ -10,6 +10,7 @@ import {
   UseGuards,
 } from '@nestjs/common'
 import { ParseUUIDPipe } from '@nestjs/common'
+import { ApiTags } from '@nestjs/swagger'
 import type { TenantContext } from '../access-control/access-control.types.js'
 import { PermissionGuard } from '../access-control/permission.guard.js'
 import { RequirePermissions } from '../access-control/permissions.decorator.js'
@@ -31,6 +32,7 @@ import {
 } from './document-sequences.schemas.js'
 import { DocumentSequencesService } from './document-sequences.service.js'
 
+@ApiTags('Document Sequences')
 @Controller('document-sequences')
 @UseGuards(AuthGuard, TenantGuard, PermissionGuard)
 @RequireTenant()

@@ -1,4 +1,5 @@
 import { Controller, Get, Inject, Query, UseGuards } from '@nestjs/common'
+import { ApiTags } from '@nestjs/swagger'
 import { PermissionGuard } from '../access-control/permission.guard.js'
 import { RequirePermissions } from '../access-control/permissions.decorator.js'
 import { CurrentTenant, RequireTenant } from '../access-control/tenant.decorator.js'
@@ -7,6 +8,7 @@ import type { TenantContext } from '../access-control/access-control.types.js'
 import { AuthGuard } from '../auth/auth.guard.js'
 import { AccountingReportsService } from './accounting-reports.service.js'
 
+@ApiTags('Accounting Reports')
 @Controller('accounting-reports')
 @UseGuards(AuthGuard, TenantGuard, PermissionGuard)
 @RequireTenant()

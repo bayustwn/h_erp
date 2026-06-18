@@ -144,6 +144,11 @@ export class AccountingReportsService {
       else if (a.type === 'LIABILITY') liabilities.push(item)
       else equities.push(item)
     }
+    const pl = await this.profitLoss(tenant)
+    const netProfit = pl.netProfit
+    if (netProfit !== 0) {
+      equities.push({ accountId: '', code: '', name: 'Laba Tahun Berjalan', amount: netProfit })
+    }
     const totalAssets = assets.reduce((s, a) => s + a.amount, 0)
     const totalLiabilities = liabilities.reduce((s, l) => s + l.amount, 0)
     const totalEquity = equities.reduce((s, e) => s + e.amount, 0)
