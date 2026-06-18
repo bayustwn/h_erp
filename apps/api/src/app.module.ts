@@ -1,5 +1,6 @@
 import { MiddlewareConsumer, Module, NestModule, RequestMethod } from '@nestjs/common'
 import { ConfigModule } from '@nestjs/config'
+import { AccountingReportsModule } from './accounting-reports/accounting-reports.module.js'
 import { AccessControlModule } from './access-control/access-control.module.js'
 import { AttachmentsModule } from './attachments/attachments.module.js'
 import { AuditModule } from './audit/audit.module.js'
@@ -30,6 +31,7 @@ import { loadAppConfig } from './config/env.config.js'
 import { DocumentSequencesModule } from './document-sequences/document-sequences.module.js'
 import { ExcelModule } from './excel/excel.module.js'
 import { HealthModule } from './health/health.module.js'
+import { JournalEntriesModule } from './journal-entries/journal-entries.module.js'
 import { InventoryModule } from './inventory/inventory.module.js'
 import { PrismaModule } from './prisma/prisma.module.js'
 import { UsersModule } from './users/users.module.js'
@@ -46,6 +48,7 @@ import { WarehousesModule } from './warehouses/warehouses.module.js'
     AuditModule,
     AuthModule,
     AccessControlModule,
+    AccountingReportsModule,
     CompaniesModule,
     BranchesModule,
     BankAccountsModule,
@@ -69,6 +72,7 @@ import { WarehousesModule } from './warehouses/warehouses.module.js'
     TaxesModule,
     WarehousesModule,
     InventoryModule,
+    JournalEntriesModule,
     DocumentSequencesModule,
     ExcelModule,
     AttachmentsModule,

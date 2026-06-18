@@ -115,6 +115,7 @@ model Company {
   supplierPayments          SupplierPayment[]
   salesReturns              SalesReturn[]
   purchaseReturns           PurchaseReturn[]
+  journalEntries            JournalEntry[]
 
   @@map("companies")
 }
@@ -148,6 +149,7 @@ model Branch {
   supplierPayments  SupplierPayment[]
   salesReturns      SalesReturn[]
   purchaseReturns   PurchaseReturn[]
+  journalEntries    JournalEntry[]
 
   @@unique([companyId, code])
   @@index([companyId])
@@ -808,6 +810,7 @@ model ChartOfAccount {
   cogsMappings     ProductAccountingMapping[]      @relation("CogsAccount")
   inventoryMappings ProductAccountingMapping[]     @relation("InventoryAccount")
   purchaseMappings ProductAccountingMapping[]      @relation("PurchaseAccount")
+  journalEntryLines JournalEntryLine[]
 
   @@unique([companyId, code])
   @@index([companyId])
@@ -1421,5 +1424,57 @@ model PurchaseReturnItem {
   @@index([purchaseReturnId])
   @@index([itemId])
   @@map("purchase_return_items")
+}
+
+enum JournalEntryStatus {
+  DRAFT
+  POSTED
+  CANCELLED
+}
+
+model JournalEntry {
+  id             String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  companyId      String             @map("company_id") @db.Uuid
+  branchId       String?            @map("branch_id") @db.Uuid
+  documentNumber String             @map("document_number") @db.VarChar(50)
+  entryDate      DateTime           @default(now()) @map("entry_date") @db.Date
+  status         JournalEntryStatus @default(DRAFT)
+  description    String?
+  totalDebit     Decimal            @default(0) @map("total_debit") @db.Decimal(19, 4)
+  totalCredit    Decimal            @default(0) @map("total_credit") @db.Decimal(19, 4)
+  referenceType  String?            @map("reference_type") @db.VarChar(50)
+  referenceId    String?            @map("reference_id") @db.VarChar(50)
+  createdAt      DateTime           @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt      DateTime           @updatedAt @map("updated_at") @db.Timestamptz(6)
+  deletedAt      DateTime?          @map("deleted_at") @db.Timestamptz(6)
+
+  company Company              @relation(fields: [companyId], references: [id])
+  branch  Branch?              @relation(fields: [branchId], references: [id])
+  lines   JournalEntryLine[]
+
+  @@index([companyId])
+  @@index([branchId])
+  @@index([documentNumber])
+  @@index([status])
+  @@index([referenceType, referenceId])
+  @@map("journal_entries")
+}
+
+model JournalEntryLine {
+  id             String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  journalEntryId String         @map("journal_entry_id") @db.Uuid
+  accountId      String         @map("account_id") @db.Uuid
+  debit          Decimal        @default(0) @db.Decimal(19, 4)
+  credit         Decimal        @default(0) @db.Decimal(19, 4)
+  description    String?
+  createdAt      DateTime       @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt      DateTime       @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  journalEntry JournalEntry    @relation(fields: [journalEntryId], references: [id])
+  account      ChartOfAccount  @relation(fields: [accountId], references: [id])
+
+  @@index([journalEntryId])
+  @@index([accountId])
+  @@map("journal_entry_lines")
 }
 
