@@ -8,6 +8,8 @@ import { BranchesModule } from './branches/branches.module.js'
 import { BankAccountsModule } from './bank-accounts/bank-accounts.module.js'
 import { ChartOfAccountsModule } from './chart-of-accounts/chart-of-accounts.module.js'
 import { CustomersModule } from './customers/customers.module.js'
+import { DeliveryOrdersModule } from './delivery-orders/delivery-orders.module.js'
+import { GoodsReceiptsModule } from './goods-receipts/goods-receipts.module.js'
 import { PurchaseOrdersModule } from './purchase-orders/purchase-orders.module.js'
 import { SalesOrdersModule } from './sales-orders/sales-orders.module.js'
 import { PaymentMethodsModule } from './payment-methods/payment-methods.module.js'
@@ -47,6 +49,8 @@ import { WarehousesModule } from './warehouses/warehouses.module.js'
     PaymentTermsModule,
     PriceListsModule,
     ProductAccountingMappingsModule,
+    DeliveryOrdersModule,
+    GoodsReceiptsModule,
     PurchaseOrdersModule,
     SalesOrdersModule,
     SuppliersModule,
