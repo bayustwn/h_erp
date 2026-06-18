@@ -109,6 +109,8 @@ model Company {
   purchaseOrders            PurchaseOrder[]
   deliveryOrders            DeliveryOrder[]
   goodsReceipts             GoodsReceipt[]
+  salesInvoices             SalesInvoice[]
+  purchaseInvoices          PurchaseInvoice[]
 
   @@map("companies")
 }
@@ -136,6 +138,8 @@ model Branch {
   purchaseOrders    PurchaseOrder[]
   deliveryOrders    DeliveryOrder[]
   goodsReceipts     GoodsReceipt[]
+  salesInvoices     SalesInvoice[]
+  purchaseInvoices  PurchaseInvoice[]
 
   @@unique([companyId, code])
   @@index([companyId])
@@ -213,8 +217,10 @@ model UnitOfMeasure {
   salesOrderItems      SalesOrderItem[]
   purchaseOrderItems   PurchaseOrderItem[]
   priceListItems       PriceListItem[]
-  deliveryOrderItems   DeliveryOrderItem[]
-  goodsReceiptItems    GoodsReceiptItem[]
+  deliveryOrderItems    DeliveryOrderItem[]
+  goodsReceiptItems     GoodsReceiptItem[]
+  salesInvoiceItems     SalesInvoiceItem[]
+  purchaseInvoiceItems  PurchaseInvoiceItem[]
 
   @@unique([companyId, code])
   @@index([companyId])
@@ -251,8 +257,10 @@ model InventoryItem {
   productAccountingMappings ProductAccountingMapping[]
   salesOrderItems     SalesOrderItem[]
   purchaseOrderItems  PurchaseOrderItem[]
-  deliveryOrderItems  DeliveryOrderItem[]
-  goodsReceiptItems   GoodsReceiptItem[]
+  deliveryOrderItems   DeliveryOrderItem[]
+  goodsReceiptItems    GoodsReceiptItem[]
+  salesInvoiceItems    SalesInvoiceItem[]
+  purchaseInvoiceItems PurchaseInvoiceItem[]
 
   @@unique([companyId, sku])
   @@unique([companyId, barcode])
@@ -588,9 +596,10 @@ model Customer {
   updatedAt   DateTime     @updatedAt @map("updated_at") @db.Timestamptz(6)
   deletedAt   DateTime?    @map("deleted_at") @db.Timestamptz(6)
 
-  company       Company         @relation(fields: [companyId], references: [id])
-  salesOrders   SalesOrder[]
+  company        Company         @relation(fields: [companyId], references: [id])
+  salesOrders    SalesOrder[]
   deliveryOrders DeliveryOrder[]
+  salesInvoices  SalesInvoice[]
 
   @@unique([companyId, code])
   @@index([companyId])
@@ -614,9 +623,10 @@ model Supplier {
   updatedAt   DateTime     @updatedAt @map("updated_at") @db.Timestamptz(6)
   deletedAt   DateTime?    @map("deleted_at") @db.Timestamptz(6)
 
-  company        Company          @relation(fields: [companyId], references: [id])
-  purchaseOrders PurchaseOrder[]
-  goodsReceipts  GoodsReceipt[]
+  company          Company          @relation(fields: [companyId], references: [id])
+  purchaseOrders   PurchaseOrder[]
+  goodsReceipts    GoodsReceipt[]
+  purchaseInvoices PurchaseInvoice[]
 
   @@unique([companyId, code])
   @@index([companyId])
@@ -680,9 +690,11 @@ model Tax {
   updatedAt   DateTime     @updatedAt @map("updated_at") @db.Timestamptz(6)
   deletedAt   DateTime?    @map("deleted_at") @db.Timestamptz(6)
 
-  company           Company             @relation(fields: [companyId], references: [id])
-  salesOrderItems   SalesOrderItem[]
-  purchaseOrderItems PurchaseOrderItem[]
+  company              Company             @relation(fields: [companyId], references: [id])
+  salesOrderItems      SalesOrderItem[]
+  purchaseOrderItems   PurchaseOrderItem[]
+  salesInvoiceItems    SalesInvoiceItem[]
+  purchaseInvoiceItems PurchaseInvoiceItem[]
 
   @@unique([companyId, code])
   @@index([companyId])
@@ -854,8 +866,9 @@ model SalesOrder {
   company  Company          @relation(fields: [companyId], references: [id])
   branch   Branch?          @relation(fields: [branchId], references: [id])
   customer Customer         @relation(fields: [customerId], references: [id])
-  items          SalesOrderItem[]
-  deliveryOrders DeliveryOrder[]
+  items           SalesOrderItem[]
+  deliveryOrders  DeliveryOrder[]
+  salesInvoices   SalesInvoice[]
 
   @@index([companyId])
   @@index([branchId])
@@ -916,8 +929,9 @@ model PurchaseOrder {
   company  Company             @relation(fields: [companyId], references: [id])
   branch   Branch?             @relation(fields: [branchId], references: [id])
   supplier Supplier            @relation(fields: [supplierId], references: [id])
-  items    PurchaseOrderItem[]
-  goodsReceipts GoodsReceipt[]
+  items            PurchaseOrderItem[]
+  goodsReceipts    GoodsReceipt[]
+  purchaseInvoices PurchaseInvoice[]
 
   @@index([companyId])
   @@index([branchId])
@@ -1061,5 +1075,127 @@ model GoodsReceiptItem {
   @@index([purchaseOrderItemId])
   @@index([itemId])
   @@map("goods_receipt_items")
+}
+
+model SalesInvoice {
+  id              String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  companyId       String         @map("company_id") @db.Uuid
+  branchId        String?        @map("branch_id") @db.Uuid
+  customerId      String         @map("customer_id") @db.Uuid
+  salesOrderId    String?        @map("sales_order_id") @db.Uuid
+  documentNumber  String         @map("document_number") @db.VarChar(50)
+  invoiceDate     DateTime       @default(now()) @map("invoice_date") @db.Date
+  dueDate         DateTime?      @map("due_date") @db.Date
+  status          DocumentStatus @default(DRAFT)
+  currency        String         @default("IDR") @db.Char(3)
+  subtotal        Decimal        @default(0) @db.Decimal(19, 4)
+  discountTotal   Decimal        @default(0) @map("discount_total") @db.Decimal(19, 4)
+  taxTotal        Decimal        @default(0) @map("tax_total") @db.Decimal(19, 4)
+  grandTotal      Decimal        @default(0) @map("grand_total") @db.Decimal(19, 4)
+  notes           String?
+  createdAt       DateTime       @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt       DateTime       @updatedAt @map("updated_at") @db.Timestamptz(6)
+  deletedAt       DateTime?      @map("deleted_at") @db.Timestamptz(6)
+
+  company    Company            @relation(fields: [companyId], references: [id])
+  branch     Branch?            @relation(fields: [branchId], references: [id])
+  customer   Customer           @relation(fields: [customerId], references: [id])
+  salesOrder SalesOrder?        @relation(fields: [salesOrderId], references: [id])
+  items      SalesInvoiceItem[]
+
+  @@index([companyId])
+  @@index([branchId])
+  @@index([customerId])
+  @@index([salesOrderId])
+  @@index([documentNumber])
+  @@index([status])
+  @@map("sales_invoices")
+}
+
+model SalesInvoiceItem {
+  id             String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  invoiceId      String   @map("invoice_id") @db.Uuid
+  itemId         String   @map("item_id") @db.Uuid
+  unitId         String   @map("unit_id") @db.Uuid
+  quantity       Decimal  @db.Decimal(19, 4)
+  unitPrice      Decimal  @map("unit_price") @db.Decimal(19, 4)
+  discountAmount Decimal? @map("discount_amount") @db.Decimal(19, 4)
+  taxId          String?  @map("tax_id") @db.Uuid
+  taxRate        Decimal? @map("tax_rate") @db.Decimal(5, 2)
+  taxAmount      Decimal? @map("tax_amount") @db.Decimal(19, 4)
+  totalPrice     Decimal  @map("total_price") @db.Decimal(19, 4)
+  notes          String?
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt      DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  invoice  SalesInvoice   @relation(fields: [invoiceId], references: [id])
+  item     InventoryItem  @relation(fields: [itemId], references: [id])
+  unit     UnitOfMeasure  @relation(fields: [unitId], references: [id])
+  tax      Tax?           @relation(fields: [taxId], references: [id])
+
+  @@index([invoiceId])
+  @@index([itemId])
+  @@map("sales_invoice_items")
+}
+
+model PurchaseInvoice {
+  id               String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  companyId        String         @map("company_id") @db.Uuid
+  branchId         String?        @map("branch_id") @db.Uuid
+  supplierId       String         @map("supplier_id") @db.Uuid
+  purchaseOrderId  String?        @map("purchase_order_id") @db.Uuid
+  documentNumber   String         @map("document_number") @db.VarChar(50)
+  invoiceDate      DateTime       @default(now()) @map("invoice_date") @db.Date
+  dueDate          DateTime?      @map("due_date") @db.Date
+  status           DocumentStatus @default(DRAFT)
+  currency         String         @default("IDR") @db.Char(3)
+  subtotal         Decimal        @default(0) @db.Decimal(19, 4)
+  discountTotal    Decimal        @default(0) @map("discount_total") @db.Decimal(19, 4)
+  taxTotal         Decimal        @default(0) @map("tax_total") @db.Decimal(19, 4)
+  grandTotal       Decimal        @default(0) @map("grand_total") @db.Decimal(19, 4)
+  notes            String?
+  createdAt        DateTime       @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt        DateTime       @updatedAt @map("updated_at") @db.Timestamptz(6)
+  deletedAt        DateTime?      @map("deleted_at") @db.Timestamptz(6)
+
+  company       Company             @relation(fields: [companyId], references: [id])
+  branch        Branch?             @relation(fields: [branchId], references: [id])
+  supplier      Supplier            @relation(fields: [supplierId], references: [id])
+  purchaseOrder PurchaseOrder?      @relation(fields: [purchaseOrderId], references: [id])
+  items         PurchaseInvoiceItem[]
+
+  @@index([companyId])
+  @@index([branchId])
+  @@index([supplierId])
+  @@index([purchaseOrderId])
+  @@index([documentNumber])
+  @@index([status])
+  @@map("purchase_invoices")
+}
+
+model PurchaseInvoiceItem {
+  id             String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  invoiceId      String   @map("invoice_id") @db.Uuid
+  itemId         String   @map("item_id") @db.Uuid
+  unitId         String   @map("unit_id") @db.Uuid
+  quantity       Decimal  @db.Decimal(19, 4)
+  unitPrice      Decimal  @map("unit_price") @db.Decimal(19, 4)
+  discountAmount Decimal? @map("discount_amount") @db.Decimal(19, 4)
+  taxId          String?  @map("tax_id") @db.Uuid
+  taxRate        Decimal? @map("tax_rate") @db.Decimal(5, 2)
+  taxAmount      Decimal? @map("tax_amount") @db.Decimal(19, 4)
+  totalPrice     Decimal  @map("total_price") @db.Decimal(19, 4)
+  notes          String?
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt      DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  invoice PurchaseInvoice  @relation(fields: [invoiceId], references: [id])
+  item    InventoryItem    @relation(fields: [itemId], references: [id])
+  unit    UnitOfMeasure    @relation(fields: [unitId], references: [id])
+  tax     Tax?             @relation(fields: [taxId], references: [id])
+
+  @@index([invoiceId])
+  @@index([itemId])
+  @@map("purchase_invoice_items")
 }
 

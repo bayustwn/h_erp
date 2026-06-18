@@ -10,6 +10,8 @@ import { ChartOfAccountsModule } from './chart-of-accounts/chart-of-accounts.mod
 import { CustomersModule } from './customers/customers.module.js'
 import { DeliveryOrdersModule } from './delivery-orders/delivery-orders.module.js'
 import { GoodsReceiptsModule } from './goods-receipts/goods-receipts.module.js'
+import { PurchaseInvoicesModule } from './purchase-invoices/purchase-invoices.module.js'
+import { SalesInvoicesModule } from './sales-invoices/sales-invoices.module.js'
 import { PurchaseOrdersModule } from './purchase-orders/purchase-orders.module.js'
 import { SalesOrdersModule } from './sales-orders/sales-orders.module.js'
 import { PaymentMethodsModule } from './payment-methods/payment-methods.module.js'
@@ -51,7 +53,9 @@ import { WarehousesModule } from './warehouses/warehouses.module.js'
     ProductAccountingMappingsModule,
     DeliveryOrdersModule,
     GoodsReceiptsModule,
+    PurchaseInvoicesModule,
     PurchaseOrdersModule,
+    SalesInvoicesModule,
     SalesOrdersModule,
     SuppliersModule,
     TaxesModule,
