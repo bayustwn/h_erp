@@ -32,6 +32,28 @@ services:
       timeout: 5s
       retries: 5
 
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    container_name: umkm_erp_api
+    restart: unless-stopped
+    ports:
+      - '3000:3000'
+    environment:
+      DATABASE_URL: postgresql://erp:erp@postgres:5432/erp?schema=public
+      REDIS_URL: redis://redis:6379
+      JWT_ACCESS_SECRET: 'replace-with-at-least-32-characters-secret!!'
+      PORT: '3000'
+      R2_ACCOUNT_ID: dummy
+      R2_ACCESS_KEY_ID: dummy
+      R2_SECRET_ACCESS_KEY: dummy
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
 volumes:
   postgres_data:
   redis_data:
