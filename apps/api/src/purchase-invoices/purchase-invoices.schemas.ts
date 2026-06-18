@@ -34,7 +34,7 @@ export const createPurchaseInvoiceSchema = z.object({
   supplierId: z.string().uuid(),
   purchaseOrderId: z.string().uuid().optional(),
   branchId: z.string().uuid().optional(),
-  documentNumber: z.string().trim().min(1).max(50),
+  documentNumber: z.string().trim().min(1).max(50).optional(),
   invoiceDate: z.string().optional(),
   dueDate: z.string().optional(),
   currency: z.string().length(3).default('IDR'),

@@ -1,7 +1,8 @@
-import { Inject, Injectable, NotFoundException } from '@nestjs/common'
+import { BadRequestException, Inject, Injectable, NotFoundException } from '@nestjs/common'
 import { createPaginationMeta, getPaginationSkipTake } from '../common/pagination/pagination.js'
 import type { Prisma } from '../generated/prisma/client.js'
 import { AuditService } from '../audit/audit.service.js'
+import { IntegrationService } from '../integration/integration.service.js'
 import { PrismaService } from '../prisma/prisma.service.js'
 import type { TenantContext } from '../access-control/access-control.types.js'
 import type { CreateDeliveryOrderInput, DeliveryOrderQuery, UpdateDeliveryOrderInput, UpdateDeliveryOrderStatusInput } from './delivery-orders.schemas.js'
@@ -11,6 +12,7 @@ export class DeliveryOrdersService {
   constructor(
     @Inject(PrismaService) private readonly prisma: PrismaService,
     @Inject(AuditService) private readonly auditService: AuditService,
+    @Inject(IntegrationService) private readonly integration: IntegrationService,
   ) {}
 
   async list(query: DeliveryOrderQuery, tenant: TenantContext) {
@@ -52,6 +54,24 @@ export class DeliveryOrdersService {
   }
 
   async create(input: CreateDeliveryOrderInput, tenant: TenantContext, actorUserId: string) {
+    if (input.salesOrderId) {
+      for (const item of input.items) {
+        if (!item.salesOrderItemId) continue
+        const soItem = await this.prisma.salesOrderItem.findUniqueOrThrow({
+          where: { id: item.salesOrderItemId },
+          select: { quantity: true },
+        })
+        const delivered = await this.prisma.deliveryOrderItem.aggregate({
+          where: { salesOrderItemId: item.salesOrderItemId, deliveryOrder: { deletedAt: null, status: { not: 'CANCELLED' } } },
+          _sum: { quantity: true },
+        })
+        const totalDelivered = Number(delivered._sum.quantity ?? 0) + Number(item.quantity)
+        if (totalDelivered > Number(soItem.quantity)) {
+          throw new BadRequestException(`Item exceeds remaining SO quantity. Max: ${Number(soItem.quantity) - Number(delivered._sum.quantity ?? 0)}`)
+        }
+      }
+    }
+    const docNumber = input.documentNumber || (await this.integration.generateDocNumber(tenant, 'DELIVERY_ORDER', input.branchId)) || 'DO-TEMP'
     return this.prisma.$transaction(async (tx) => {
       const customerId = input.salesOrderId
         ? (await tx.salesOrder.findUniqueOrThrow({ where: { id: input.salesOrderId }, select: { customerId: true } })).customerId
@@ -63,7 +83,7 @@ export class DeliveryOrdersService {
           salesOrderId: input.salesOrderId,
           warehouseId: input.warehouseId,
           customerId,
-          documentNumber: input.documentNumber,
+          documentNumber: docNumber,
           deliveryDate: input.deliveryDate ? new Date(input.deliveryDate) : new Date(),
           notes: input.notes,
           items: {
@@ -132,6 +152,20 @@ export class DeliveryOrdersService {
         await this.auditService.recordDelete(auditInput, tx)
       } else {
         await this.auditService.recordUpdate(auditInput, tx)
+      }
+      if (input.status === 'COMPLETED' && current.items) {
+        for (const item of current.items) {
+          await this.integration.createStockMovement(tx, {
+            companyId: tenant.companyId,
+            warehouseId: current.warehouseId,
+            itemId: item.itemId,
+            movementType: 'SALES_OUT',
+            sourceType: 'SALES_DELIVERY',
+            sourceId: orderId,
+            quantity: Number(item.quantity),
+            actorUserId,
+          })
+        }
       }
       return updated
     })

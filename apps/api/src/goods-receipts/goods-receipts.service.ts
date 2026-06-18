@@ -1,7 +1,8 @@
-import { Inject, Injectable, NotFoundException } from '@nestjs/common'
+import { BadRequestException, Inject, Injectable, NotFoundException } from '@nestjs/common'
 import { createPaginationMeta, getPaginationSkipTake } from '../common/pagination/pagination.js'
 import type { Prisma } from '../generated/prisma/client.js'
 import { AuditService } from '../audit/audit.service.js'
+import { IntegrationService } from '../integration/integration.service.js'
 import { PrismaService } from '../prisma/prisma.service.js'
 import type { TenantContext } from '../access-control/access-control.types.js'
 import type { CreateGoodsReceiptInput, GoodsReceiptQuery, UpdateGoodsReceiptInput, UpdateGoodsReceiptStatusInput } from './goods-receipts.schemas.js'
@@ -11,6 +12,7 @@ export class GoodsReceiptsService {
   constructor(
     @Inject(PrismaService) private readonly prisma: PrismaService,
     @Inject(AuditService) private readonly auditService: AuditService,
+    @Inject(IntegrationService) private readonly integration: IntegrationService,
   ) {}
 
   async list(query: GoodsReceiptQuery, tenant: TenantContext) {
@@ -52,6 +54,24 @@ export class GoodsReceiptsService {
   }
 
   async create(input: CreateGoodsReceiptInput, tenant: TenantContext, actorUserId: string) {
+    if (input.purchaseOrderId) {
+      for (const item of input.items) {
+        if (!item.purchaseOrderItemId) continue
+        const poItem = await this.prisma.purchaseOrderItem.findUniqueOrThrow({
+          where: { id: item.purchaseOrderItemId },
+          select: { quantity: true },
+        })
+        const received = await this.prisma.goodsReceiptItem.aggregate({
+          where: { purchaseOrderItemId: item.purchaseOrderItemId, goodsReceipt: { deletedAt: null, status: { not: 'CANCELLED' } } },
+          _sum: { quantity: true },
+        })
+        const totalReceived = Number(received._sum.quantity ?? 0) + Number(item.quantity)
+        if (totalReceived > Number(poItem.quantity)) {
+          throw new BadRequestException(`Item exceeds remaining PO quantity. Max: ${Number(poItem.quantity) - Number(received._sum.quantity ?? 0)}`)
+        }
+      }
+    }
+    const docNumber = input.documentNumber || (await this.integration.generateDocNumber(tenant, 'GOODS_RECEIPT', input.branchId)) || 'GR-TEMP'
     return this.prisma.$transaction(async (tx) => {
       const supplierId = input.purchaseOrderId
         ? (await tx.purchaseOrder.findUniqueOrThrow({ where: { id: input.purchaseOrderId }, select: { supplierId: true } })).supplierId
@@ -63,7 +83,7 @@ export class GoodsReceiptsService {
           purchaseOrderId: input.purchaseOrderId,
           warehouseId: input.warehouseId,
           supplierId,
-          documentNumber: input.documentNumber,
+          documentNumber: docNumber,
           receiptDate: input.receiptDate ? new Date(input.receiptDate) : new Date(),
           notes: input.notes,
           items: {
@@ -132,6 +152,20 @@ export class GoodsReceiptsService {
         await this.auditService.recordDelete(auditInput, tx)
       } else {
         await this.auditService.recordUpdate(auditInput, tx)
+      }
+      if (input.status === 'COMPLETED' && current.items) {
+        for (const item of current.items) {
+          await this.integration.createStockMovement(tx, {
+            companyId: tenant.companyId,
+            warehouseId: current.warehouseId,
+            itemId: item.itemId,
+            movementType: 'PURCHASE_IN',
+            sourceType: 'PURCHASE_RECEIPT',
+            sourceId: orderId,
+            quantity: Number(item.quantity),
+            actorUserId,
+          })
+        }
       }
       return updated
     })

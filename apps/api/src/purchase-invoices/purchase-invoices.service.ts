@@ -1,7 +1,8 @@
-import { Inject, Injectable, NotFoundException } from '@nestjs/common'
+import { BadRequestException, Inject, Injectable, NotFoundException } from '@nestjs/common'
 import { createPaginationMeta, getPaginationSkipTake } from '../common/pagination/pagination.js'
 import type { Prisma } from '../generated/prisma/client.js'
 import { AuditService } from '../audit/audit.service.js'
+import { IntegrationService } from '../integration/integration.service.js'
 import { PrismaService } from '../prisma/prisma.service.js'
 import type { TenantContext } from '../access-control/access-control.types.js'
 import type { CreatePurchaseInvoiceInput, PurchaseInvoiceQuery, UpdatePurchaseInvoiceInput, UpdatePurchaseInvoiceStatusInput } from './purchase-invoices.schemas.js'
@@ -11,6 +12,7 @@ export class PurchaseInvoicesService {
   constructor(
     @Inject(PrismaService) private readonly prisma: PrismaService,
     @Inject(AuditService) private readonly auditService: AuditService,
+    @Inject(IntegrationService) private readonly integration: IntegrationService,
   ) {}
 
   async list(query: PurchaseInvoiceQuery, tenant: TenantContext) {
@@ -60,6 +62,20 @@ export class PurchaseInvoicesService {
   }
 
   async create(input: CreatePurchaseInvoiceInput, tenant: TenantContext, actorUserId: string) {
+    if (input.purchaseOrderId) {
+      const po = await this.prisma.purchaseOrder.findUniqueOrThrow({
+        where: { id: input.purchaseOrderId },
+        select: {
+          grandTotal: true,
+          purchaseInvoices: { where: { deletedAt: null, status: { not: 'CANCELLED' } }, select: { grandTotal: true } },
+        },
+      })
+      const invoicedSoFar = po.purchaseInvoices.reduce((s, i) => s + Number(i.grandTotal), 0)
+      if (invoicedSoFar + Number(input.grandTotal) > Number(po.grandTotal)) {
+        throw new BadRequestException(`Invoice total exceeds remaining PO balance. Remaining: ${Number(po.grandTotal) - invoicedSoFar}`)
+      }
+    }
+    const docNumber = input.documentNumber || (await this.integration.generateDocNumber(tenant, 'PURCHASE_INVOICE', input.branchId)) || 'PI-TEMP'
     return this.prisma.$transaction(async (tx) => {
       const invoice = await tx.purchaseInvoice.create({
         data: {
@@ -67,7 +83,7 @@ export class PurchaseInvoicesService {
           branchId: input.branchId,
           supplierId: input.supplierId,
           purchaseOrderId: input.purchaseOrderId,
-          documentNumber: input.documentNumber,
+          documentNumber: docNumber,
           invoiceDate: input.invoiceDate ? new Date(input.invoiceDate) : new Date(),
           dueDate: input.dueDate ? new Date(input.dueDate) : undefined,
           currency: input.currency,
@@ -159,7 +175,49 @@ export class PurchaseInvoicesService {
       } else {
         await this.auditService.recordUpdate(auditInput, tx)
       }
+      if (input.status === 'COMPLETED') {
+        await this.postPurchaseInvoiceJournal(tx, updated, tenant)
+      }
       return updated
+    })
+  }
+
+  private async postPurchaseInvoiceJournal(
+    tx: Prisma.TransactionClient,
+    invoice: Awaited<ReturnType<PurchaseInvoicesService['getById']>>,
+    tenant: TenantContext,
+  ) {
+    const apAccount = await this.integration.findApAccount(tx, tenant.companyId)
+    if (!apAccount) return
+    const lines: Array<{ accountId: string; debit: number; credit: number; description?: string }> = []
+    lines.push({ accountId: apAccount.id, debit: 0, credit: Number(invoice.grandTotal), description: 'Purchase invoice' })
+    for (const item of invoice.items) {
+      const purchaseAccountId = await this.integration.findPurchaseAccount(tx, tenant.companyId, item.itemId)
+      if (purchaseAccountId) {
+        lines.push({ accountId: purchaseAccountId, debit: Number(item.totalPrice), credit: 0, description: item.item?.name ?? '' })
+      }
+    }
+    if (Number(invoice.discountTotal) > 0) {
+      const purchaseAccountId = await this.integration.findPurchaseAccount(tx, tenant.companyId, invoice.items[0]?.itemId ?? '')
+      if (purchaseAccountId) {
+        lines.push({ accountId: purchaseAccountId, debit: -Number(invoice.discountTotal), credit: 0 })
+      }
+    }
+    if (Number(invoice.taxTotal) > 0) {
+      const taxAccount = await this.integration.findApAccount(tx, tenant.companyId)
+      if (taxAccount) {
+        lines.push({ accountId: taxAccount.id, debit: 0, credit: -Number(invoice.taxTotal), description: 'PPN Input' })
+      }
+    }
+    await this.integration.createJournalEntry(tx, {
+      companyId: tenant.companyId,
+      branchId: invoice.branchId ?? undefined,
+      documentNumber: `JE-${invoice.documentNumber}`,
+      entryDate: new Date(),
+      description: `Purchase invoice ${invoice.documentNumber}`,
+      referenceType: 'PURCHASE_INVOICE',
+      referenceId: invoice.id,
+      lines,
     })
   }
 

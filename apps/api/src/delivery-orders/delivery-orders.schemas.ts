@@ -27,7 +27,7 @@ export const createDeliveryOrderSchema = z.object({
   salesOrderId: z.string().uuid().optional(),
   warehouseId: z.string().uuid(),
   branchId: z.string().uuid().optional(),
-  documentNumber: z.string().trim().min(1).max(50),
+  documentNumber: z.string().trim().min(1).max(50).optional(),
   deliveryDate: z.string().optional(),
   notes: optionalString,
   items: z.array(deliveryOrderItemSchema).min(1),

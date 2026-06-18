@@ -1,7 +1,8 @@
-import { Inject, Injectable, NotFoundException } from '@nestjs/common'
+import { BadRequestException, Inject, Injectable, NotFoundException } from '@nestjs/common'
 import { createPaginationMeta, getPaginationSkipTake } from '../common/pagination/pagination.js'
 import type { Prisma } from '../generated/prisma/client.js'
 import { AuditService } from '../audit/audit.service.js'
+import { IntegrationService } from '../integration/integration.service.js'
 import { PrismaService } from '../prisma/prisma.service.js'
 import type { TenantContext } from '../access-control/access-control.types.js'
 import type { CreateSalesOrderInput, SalesOrderQuery, UpdateSalesOrderInput, UpdateSalesOrderStatusInput } from './sales-orders.schemas.js'
@@ -11,6 +12,7 @@ export class SalesOrdersService {
   constructor(
     @Inject(PrismaService) private readonly prisma: PrismaService,
     @Inject(AuditService) private readonly auditService: AuditService,
+    @Inject(IntegrationService) private readonly integration: IntegrationService,
   ) {}
 
   async list(query: SalesOrderQuery, tenant: TenantContext) {
@@ -59,13 +61,21 @@ export class SalesOrdersService {
   }
 
   async create(input: CreateSalesOrderInput, tenant: TenantContext, actorUserId: string) {
+    const customer = await this.prisma.customer.findFirstOrThrow({
+      where: { id: input.customerId, companyId: tenant.companyId, deletedAt: null },
+      select: { creditLimit: true },
+    })
+    if (customer.creditLimit && Number(input.grandTotal) > Number(customer.creditLimit)) {
+      throw new BadRequestException(`Order total exceeds customer credit limit of ${customer.creditLimit}`)
+    }
+    const docNumber = input.documentNumber || (await this.integration.generateDocNumber(tenant, 'SALES_ORDER', input.branchId)) || 'SO-TEMP'
     return this.prisma.$transaction(async (tx) => {
       const order = await tx.salesOrder.create({
         data: {
           companyId: tenant.companyId,
           branchId: input.branchId,
           customerId: input.customerId,
-          documentNumber: input.documentNumber,
+          documentNumber: docNumber,
           referenceNumber: input.referenceNumber,
           orderDate: input.orderDate ? new Date(input.orderDate) : new Date(),
           currency: input.currency,
@@ -99,6 +109,17 @@ export class SalesOrdersService {
 
   async update(orderId: string, input: UpdateSalesOrderInput, tenant: TenantContext, actorUserId: string) {
     const current = await this.getById(orderId, tenant)
+    if (input.customerId || input.grandTotal !== undefined) {
+      const customerId = input.customerId ?? current.customerId
+      const grandTotal = input.grandTotal ?? Number(current.grandTotal)
+      const customer = await this.prisma.customer.findFirstOrThrow({
+        where: { id: customerId, companyId: tenant.companyId, deletedAt: null },
+        select: { creditLimit: true },
+      })
+      if (customer.creditLimit && grandTotal > Number(customer.creditLimit)) {
+        throw new BadRequestException(`Order total exceeds customer credit limit of ${customer.creditLimit}`)
+      }
+    }
     return this.prisma.$transaction(async (tx) => {
       if (input.items) {
         await tx.salesOrderItem.deleteMany({ where: { salesOrderId: orderId } })

@@ -33,7 +33,7 @@ export const salesOrderItemSchema = z.object({
 export const createSalesOrderSchema = z.object({
   customerId: z.string().uuid(),
   branchId: z.string().uuid().optional(),
-  documentNumber: z.string().trim().min(1).max(50),
+  documentNumber: z.string().trim().min(1).max(50).optional(),
   referenceNumber: optionalString,
   orderDate: z.string().optional(),
   currency: z.string().length(3).default('IDR'),

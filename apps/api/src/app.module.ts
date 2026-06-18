@@ -32,6 +32,7 @@ import { DocumentSequencesModule } from './document-sequences/document-sequences
 import { ExcelModule } from './excel/excel.module.js'
 import { HealthModule } from './health/health.module.js'
 import { JournalEntriesModule } from './journal-entries/journal-entries.module.js'
+import { LandedCostsModule } from './landed-costs/landed-costs.module.js'
 import { InventoryModule } from './inventory/inventory.module.js'
 import { PrismaModule } from './prisma/prisma.module.js'
 import { UsersModule } from './users/users.module.js'
@@ -73,6 +74,7 @@ import { WarehousesModule } from './warehouses/warehouses.module.js'
     WarehousesModule,
     InventoryModule,
     JournalEntriesModule,
+    LandedCostsModule,
     DocumentSequencesModule,
     ExcelModule,
     AttachmentsModule,

@@ -2,6 +2,7 @@ import { Inject, Injectable, NotFoundException } from '@nestjs/common'
 import { createPaginationMeta, getPaginationSkipTake } from '../common/pagination/pagination.js'
 import type { Prisma } from '../generated/prisma/client.js'
 import { AuditService } from '../audit/audit.service.js'
+import { IntegrationService } from '../integration/integration.service.js'
 import { PrismaService } from '../prisma/prisma.service.js'
 import type { TenantContext } from '../access-control/access-control.types.js'
 import type { CreateSupplierPaymentInput, SupplierPaymentQuery, UpdateSupplierPaymentStatusInput } from './supplier-payments.schemas.js'
@@ -11,6 +12,7 @@ export class SupplierPaymentsService {
   constructor(
     @Inject(PrismaService) private readonly prisma: PrismaService,
     @Inject(AuditService) private readonly auditService: AuditService,
+    @Inject(IntegrationService) private readonly integration: IntegrationService,
   ) {}
 
   async list(query: SupplierPaymentQuery, tenant: TenantContext) {
@@ -51,13 +53,14 @@ export class SupplierPaymentsService {
   }
 
   async create(input: CreateSupplierPaymentInput, tenant: TenantContext, actorUserId: string) {
+    const docNumber = input.documentNumber || (await this.integration.generateDocNumber(tenant, 'SUPPLIER_PAYMENT', input.branchId)) || 'SP-TEMP'
     return this.prisma.$transaction(async (tx) => {
       const payment = await tx.supplierPayment.create({
         data: {
           companyId: tenant.companyId,
           branchId: input.branchId,
           supplierId: input.supplierId,
-          documentNumber: input.documentNumber,
+          documentNumber: docNumber,
           paymentDate: input.paymentDate ? new Date(input.paymentDate) : new Date(),
           paymentMethodId: input.paymentMethodId,
           bankAccountId: input.bankAccountId,
@@ -95,7 +98,34 @@ export class SupplierPaymentsService {
       } else {
         await this.auditService.recordUpdate(auditInput, tx)
       }
+      if (input.status === 'COMPLETED') {
+        await this.postPaymentJournal(tx, updated, tenant)
+      }
       return updated
+    })
+  }
+
+  private async postPaymentJournal(
+    tx: Prisma.TransactionClient,
+    payment: Awaited<ReturnType<SupplierPaymentsService['getById']>>,
+    tenant: TenantContext,
+  ) {
+    const cashAccount = await this.integration.findCashAccount(tx, tenant.companyId)
+    const apAccount = await this.integration.findApAccount(tx, tenant.companyId)
+    if (!cashAccount || !apAccount) return
+    const lines: Array<{ accountId: string; debit: number; credit: number; description?: string }> = [
+      { accountId: apAccount.id, debit: Number(payment.amount), credit: 0, description: 'Supplier payment' },
+      { accountId: cashAccount.id, debit: 0, credit: Number(payment.amount), description: 'Payment disbursed' },
+    ]
+    await this.integration.createJournalEntry(tx, {
+      companyId: tenant.companyId,
+      branchId: payment.branchId ?? undefined,
+      documentNumber: `JE-${payment.documentNumber}`,
+      entryDate: new Date(),
+      description: `Supplier payment ${payment.documentNumber}`,
+      referenceType: 'SUPPLIER_PAYMENT',
+      referenceId: payment.id,
+      lines,
     })
   }
 

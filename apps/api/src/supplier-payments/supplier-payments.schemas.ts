@@ -22,7 +22,7 @@ export const paymentAllocationSchema = z.object({
 export const createSupplierPaymentSchema = z.object({
   supplierId: z.string().uuid(),
   branchId: z.string().uuid().optional(),
-  documentNumber: z.string().trim().min(1).max(50),
+  documentNumber: z.string().trim().min(1).max(50).optional(),
   paymentDate: z.string().optional(),
   paymentMethodId: z.string().uuid(),
   bankAccountId: z.string().uuid().optional(),

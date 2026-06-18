@@ -53,6 +53,10 @@ enum StockMovementType {
   ADJUSTMENT_OUT
   TRANSFER_OUT
   TRANSFER_IN
+  SALES_OUT
+  PURCHASE_IN
+  RETURN_IN
+  RETURN_OUT
 }
 
 enum StockMovementSourceType {
@@ -116,6 +120,7 @@ model Company {
   salesReturns              SalesReturn[]
   purchaseReturns           PurchaseReturn[]
   journalEntries            JournalEntry[]
+  landedCosts               LandedCost[]
 
   @@map("companies")
 }
@@ -150,6 +155,7 @@ model Branch {
   salesReturns      SalesReturn[]
   purchaseReturns   PurchaseReturn[]
   journalEntries    JournalEntry[]
+  landedCosts       LandedCost[]
 
   @@unique([companyId, code])
   @@index([companyId])
@@ -955,6 +961,7 @@ model PurchaseOrder {
   items            PurchaseOrderItem[]
   goodsReceipts    GoodsReceipt[]
   purchaseInvoices PurchaseInvoice[]
+  landedCosts      LandedCost[]
 
   @@index([companyId])
   @@index([branchId])
@@ -986,6 +993,7 @@ model PurchaseOrderItem {
   unit              UnitOfMeasure       @relation(fields: [unitId], references: [id])
   tax               Tax?                @relation(fields: [taxId], references: [id])
   goodsReceiptItems GoodsReceiptItem[]
+  landedCostItems   LandedCostItem[]
 
   @@index([purchaseOrderId])
   @@index([itemId])
@@ -1476,5 +1484,50 @@ model JournalEntryLine {
   @@index([journalEntryId])
   @@index([accountId])
   @@map("journal_entry_lines")
+}
+
+model LandedCost {
+  id               String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  companyId        String         @map("company_id") @db.Uuid
+  branchId         String?        @map("branch_id") @db.Uuid
+  purchaseOrderId  String         @map("purchase_order_id") @db.Uuid
+  documentNumber   String         @map("document_number") @db.VarChar(50)
+  costDate         DateTime       @default(now()) @map("cost_date") @db.Date
+  status           DocumentStatus @default(DRAFT)
+  description      String?
+  totalCost        Decimal        @db.Decimal(19, 4)
+  allocationMethod String         @default("BY_VALUE") @map("allocation_method") @db.VarChar(20)
+  createdAt        DateTime       @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt        DateTime       @updatedAt @map("updated_at") @db.Timestamptz(6)
+  deletedAt        DateTime?      @map("deleted_at") @db.Timestamptz(6)
+
+  company       Company             @relation(fields: [companyId], references: [id])
+  branch        Branch?             @relation(fields: [branchId], references: [id])
+  purchaseOrder PurchaseOrder       @relation(fields: [purchaseOrderId], references: [id])
+  items         LandedCostItem[]
+
+  @@index([companyId])
+  @@index([branchId])
+  @@index([purchaseOrderId])
+  @@index([documentNumber])
+  @@index([status])
+  @@map("landed_costs")
+}
+
+model LandedCostItem {
+  id              String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  landedCostId    String   @map("landed_cost_id") @db.Uuid
+  purchaseOrderItemId String @map("purchase_order_item_id") @db.Uuid
+  amount          Decimal  @db.Decimal(19, 4)
+  description     String?
+  createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt       DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  landedCost        LandedCost         @relation(fields: [landedCostId], references: [id])
+  purchaseOrderItem PurchaseOrderItem  @relation(fields: [purchaseOrderItemId], references: [id])
+
+  @@index([landedCostId])
+  @@index([purchaseOrderItemId])
+  @@map("landed_cost_items")
 }
 

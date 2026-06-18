@@ -27,7 +27,7 @@ export const createGoodsReceiptSchema = z.object({
   purchaseOrderId: z.string().uuid().optional(),
   warehouseId: z.string().uuid(),
   branchId: z.string().uuid().optional(),
-  documentNumber: z.string().trim().min(1).max(50),
+  documentNumber: z.string().trim().min(1).max(50).optional(),
   receiptDate: z.string().optional(),
   notes: optionalString,
   items: z.array(goodsReceiptItemSchema).min(1),
