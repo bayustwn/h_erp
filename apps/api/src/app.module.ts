@@ -7,6 +7,7 @@ import { AuthModule } from './auth/auth.module.js'
 import { BranchesModule } from './branches/branches.module.js'
 import { BankAccountsModule } from './bank-accounts/bank-accounts.module.js'
 import { ChartOfAccountsModule } from './chart-of-accounts/chart-of-accounts.module.js'
+import { CustomerPaymentsModule } from './customer-payments/customer-payments.module.js'
 import { CustomersModule } from './customers/customers.module.js'
 import { DeliveryOrdersModule } from './delivery-orders/delivery-orders.module.js'
 import { GoodsReceiptsModule } from './goods-receipts/goods-receipts.module.js'
@@ -18,6 +19,7 @@ import { PaymentMethodsModule } from './payment-methods/payment-methods.module.j
 import { PaymentTermsModule } from './payment-terms/payment-terms.module.js'
 import { ProductAccountingMappingsModule } from './product-accounting-mappings/product-accounting-mappings.module.js'
 import { PriceListsModule } from './price-lists/price-lists.module.js'
+import { SupplierPaymentsModule } from './supplier-payments/supplier-payments.module.js'
 import { SuppliersModule } from './suppliers/suppliers.module.js'
 import { TaxesModule } from './taxes/taxes.module.js'
 import { RequestLoggerMiddleware } from './common/http/request-logger.middleware.js'
@@ -46,6 +48,7 @@ import { WarehousesModule } from './warehouses/warehouses.module.js'
     BranchesModule,
     BankAccountsModule,
     ChartOfAccountsModule,
+    CustomerPaymentsModule,
     CustomersModule,
     PaymentMethodsModule,
     PaymentTermsModule,
@@ -58,6 +61,7 @@ import { WarehousesModule } from './warehouses/warehouses.module.js'
     SalesInvoicesModule,
     SalesOrdersModule,
     SuppliersModule,
+    SupplierPaymentsModule,
     TaxesModule,
     WarehousesModule,
     InventoryModule,
