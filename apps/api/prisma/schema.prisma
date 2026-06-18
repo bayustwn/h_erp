@@ -105,6 +105,8 @@ model Company {
   bankAccounts      BankAccount[]
   chartOfAccounts   ChartOfAccount[]
   productAccountingMappings ProductAccountingMapping[]
+  salesOrders               SalesOrder[]
+  purchaseOrders            PurchaseOrder[]
 
   @@map("companies")
 }
@@ -128,6 +130,8 @@ model Branch {
   documentSequences DocumentSequence[]
   attachments       Attachment[]
   auditLogs         AuditLog[]
+  salesOrders       SalesOrder[]
+  purchaseOrders    PurchaseOrder[]
 
   @@unique([companyId, code])
   @@index([companyId])
@@ -198,8 +202,10 @@ model UnitOfMeasure {
 
   company         Company              @relation(fields: [companyId], references: [id])
   baseItems       InventoryItem[]      @relation("InventoryItemBaseUnit")
-  conversionsFrom ItemUnitConversion[] @relation("ItemUnitConversionFromUnit")
-  conversionsTo   ItemUnitConversion[] @relation("ItemUnitConversionToUnit")
+  conversionsFrom    ItemUnitConversion[] @relation("ItemUnitConversionFromUnit")
+  conversionsTo      ItemUnitConversion[] @relation("ItemUnitConversionToUnit")
+  salesOrderItems    SalesOrderItem[]
+  purchaseOrderItems PurchaseOrderItem[]
   priceListItems  PriceListItem[]
 
   @@unique([companyId, code])
@@ -233,8 +239,10 @@ model InventoryItem {
   conversions    ItemUnitConversion[]
   stockBalances  StockBalance[]
   stockMovements StockMovement[]
-  priceListItems  PriceListItem[]
+  priceListItems   PriceListItem[]
   productAccountingMappings ProductAccountingMapping[]
+  salesOrderItems  SalesOrderItem[]
+  purchaseOrderItems PurchaseOrderItem[]
 
   @@unique([companyId, sku])
   @@unique([companyId, barcode])
@@ -570,7 +578,8 @@ model Customer {
   updatedAt   DateTime     @updatedAt @map("updated_at") @db.Timestamptz(6)
   deletedAt   DateTime?    @map("deleted_at") @db.Timestamptz(6)
 
-  company Company @relation(fields: [companyId], references: [id])
+  company    Company         @relation(fields: [companyId], references: [id])
+  salesOrders SalesOrder[]
 
   @@unique([companyId, code])
   @@index([companyId])
@@ -594,7 +603,8 @@ model Supplier {
   updatedAt   DateTime     @updatedAt @map("updated_at") @db.Timestamptz(6)
   deletedAt   DateTime?    @map("deleted_at") @db.Timestamptz(6)
 
-  company Company @relation(fields: [companyId], references: [id])
+  company        Company          @relation(fields: [companyId], references: [id])
+  purchaseOrders PurchaseOrder[]
 
   @@unique([companyId, code])
   @@index([companyId])
@@ -658,7 +668,9 @@ model Tax {
   updatedAt   DateTime     @updatedAt @map("updated_at") @db.Timestamptz(6)
   deletedAt   DateTime?    @map("deleted_at") @db.Timestamptz(6)
 
-  company Company @relation(fields: [companyId], references: [id])
+  company           Company             @relation(fields: [companyId], references: [id])
+  salesOrderItems   SalesOrderItem[]
+  purchaseOrderItems PurchaseOrderItem[]
 
   @@unique([companyId, code])
   @@index([companyId])
@@ -795,5 +807,135 @@ model ProductAccountingMapping {
   @@index([itemCategoryId])
   @@index([itemId])
   @@map("product_accounting_mappings")
+}
+
+enum DocumentStatus {
+  DRAFT
+  SUBMITTED
+  APPROVED
+  REJECTED
+  CONFIRMED
+  PROCESSING
+  COMPLETED
+  CANCELLED
+}
+
+model SalesOrder {
+  id              String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  companyId       String         @map("company_id") @db.Uuid
+  branchId        String?        @map("branch_id") @db.Uuid
+  customerId      String         @map("customer_id") @db.Uuid
+  documentNumber  String         @map("document_number") @db.VarChar(50)
+  referenceNumber String?        @map("reference_number") @db.VarChar(100)
+  orderDate       DateTime       @default(now()) @map("order_date") @db.Date
+  status          DocumentStatus @default(DRAFT)
+  currency        String         @default("IDR") @db.Char(3)
+  subtotal        Decimal        @default(0) @db.Decimal(19, 4)
+  discountTotal   Decimal        @default(0) @map("discount_total") @db.Decimal(19, 4)
+  taxTotal        Decimal        @default(0) @map("tax_total") @db.Decimal(19, 4)
+  grandTotal      Decimal        @default(0) @map("grand_total") @db.Decimal(19, 4)
+  notes           String?
+  createdAt       DateTime       @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt       DateTime       @updatedAt @map("updated_at") @db.Timestamptz(6)
+  deletedAt       DateTime?      @map("deleted_at") @db.Timestamptz(6)
+
+  company  Company          @relation(fields: [companyId], references: [id])
+  branch   Branch?          @relation(fields: [branchId], references: [id])
+  customer Customer         @relation(fields: [customerId], references: [id])
+  items    SalesOrderItem[]
+
+  @@index([companyId])
+  @@index([branchId])
+  @@index([customerId])
+  @@index([documentNumber])
+  @@index([status])
+  @@map("sales_orders")
+}
+
+model SalesOrderItem {
+  id              String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  salesOrderId    String   @map("sales_order_id") @db.Uuid
+  itemId          String   @map("item_id") @db.Uuid
+  unitId          String   @map("unit_id") @db.Uuid
+  quantity        Decimal  @db.Decimal(19, 4)
+  unitPrice       Decimal  @map("unit_price") @db.Decimal(19, 4)
+  discountPercent Decimal? @map("discount_percent") @db.Decimal(5, 2)
+  discountAmount  Decimal? @map("discount_amount") @db.Decimal(19, 4)
+  taxId           String?  @map("tax_id") @db.Uuid
+  taxRate         Decimal? @map("tax_rate") @db.Decimal(5, 2)
+  taxAmount       Decimal? @map("tax_amount") @db.Decimal(19, 4)
+  totalPrice      Decimal  @map("total_price") @db.Decimal(19, 4)
+  notes           String?
+  createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt       DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  salesOrder SalesOrder     @relation(fields: [salesOrderId], references: [id])
+  item       InventoryItem  @relation(fields: [itemId], references: [id])
+  unit       UnitOfMeasure  @relation(fields: [unitId], references: [id])
+  tax        Tax?           @relation(fields: [taxId], references: [id])
+
+  @@index([salesOrderId])
+  @@index([itemId])
+  @@map("sales_order_items")
+}
+
+model PurchaseOrder {
+  id              String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  companyId       String         @map("company_id") @db.Uuid
+  branchId        String?        @map("branch_id") @db.Uuid
+  supplierId      String         @map("supplier_id") @db.Uuid
+  documentNumber  String         @map("document_number") @db.VarChar(50)
+  referenceNumber String?        @map("reference_number") @db.VarChar(100)
+  orderDate       DateTime       @default(now()) @map("order_date") @db.Date
+  expectedDate    DateTime?      @map("expected_date") @db.Date
+  status          DocumentStatus @default(DRAFT)
+  currency        String         @default("IDR") @db.Char(3)
+  subtotal        Decimal        @default(0) @db.Decimal(19, 4)
+  discountTotal   Decimal        @default(0) @map("discount_total") @db.Decimal(19, 4)
+  taxTotal        Decimal        @default(0) @map("tax_total") @db.Decimal(19, 4)
+  grandTotal      Decimal        @default(0) @map("grand_total") @db.Decimal(19, 4)
+  notes           String?
+  createdAt       DateTime       @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt       DateTime       @updatedAt @map("updated_at") @db.Timestamptz(6)
+  deletedAt       DateTime?      @map("deleted_at") @db.Timestamptz(6)
+
+  company  Company             @relation(fields: [companyId], references: [id])
+  branch   Branch?             @relation(fields: [branchId], references: [id])
+  supplier Supplier            @relation(fields: [supplierId], references: [id])
+  items    PurchaseOrderItem[]
+
+  @@index([companyId])
+  @@index([branchId])
+  @@index([supplierId])
+  @@index([documentNumber])
+  @@index([status])
+  @@map("purchase_orders")
+}
+
+model PurchaseOrderItem {
+  id              String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  purchaseOrderId String   @map("purchase_order_id") @db.Uuid
+  itemId          String   @map("item_id") @db.Uuid
+  unitId          String   @map("unit_id") @db.Uuid
+  quantity        Decimal  @db.Decimal(19, 4)
+  unitPrice       Decimal  @map("unit_price") @db.Decimal(19, 4)
+  discountPercent Decimal? @map("discount_percent") @db.Decimal(5, 2)
+  discountAmount  Decimal? @map("discount_amount") @db.Decimal(19, 4)
+  taxId           String?  @map("tax_id") @db.Uuid
+  taxRate         Decimal? @map("tax_rate") @db.Decimal(5, 2)
+  taxAmount       Decimal? @map("tax_amount") @db.Decimal(19, 4)
+  totalPrice      Decimal  @map("total_price") @db.Decimal(19, 4)
+  notes           String?
+  createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt       DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  purchaseOrder PurchaseOrder  @relation(fields: [purchaseOrderId], references: [id])
+  item          InventoryItem  @relation(fields: [itemId], references: [id])
+  unit          UnitOfMeasure  @relation(fields: [unitId], references: [id])
+  tax           Tax?           @relation(fields: [taxId], references: [id])
+
+  @@index([purchaseOrderId])
+  @@index([itemId])
+  @@map("purchase_order_items")
 }
 
